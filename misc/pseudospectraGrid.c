@@ -1,17 +1,28 @@
 
 /****
  * 27/07/2012
- * Computing of the pseudospectra with no exclusion disks, only grid by grid svd evaluation.
- *
- * Compiled with :  gcc -o snd svd_no_disks.c ../paulslib.c -lm ../bitmaplib.c -llapacke -llapack -lrefblas -L/usr/lib/gcc/x86_64-linux-gnu/4.4 -lgfortran
+ * Computing the pseudospectra with no exclusion disks,
+ * just straightforward grid by grid svd evaluation.
+ * ORIGINAL VERSION: svd_no_disks.c work on pseudospectra.
+ * AUXILIARY LIBRARIES:
+ *    PAULSLIB, BITMAPLIB to visualise pseudospectra (temporarily not incluede)
+      LAPACKE (FOR C)
+      LAPACK (FOR FORTRAN)
+      REFBLAS
+
+ * COMPILE: gcc -o snd svd_no_disks.c ../paulslib.c -lm ../bitmaplib.c
+ *-llapacke -llapack -lrefblas -L/usr/lib/gcc/x86_64-linux-gnu/4.4 -lgfortran
  * Write in file svd_no_disks.mat only the values of svd in pseudospectra.
 *****/
 
 #include "math.h"
-#include "../paulslib.h"
-#include "../bitmaplib.h"
+//#include "../paulslib.h"
+//#include "../bitmaplib.h"
+
+#include "aux.h"
 
 #include <stdlib.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <lapacke.h>
@@ -19,34 +30,12 @@
 
 #define min(a,b) ((a)>(b)?(b):(a))
 
-/* Auxiliary routines prototypes */
-extern void print_matrix( char* desc, lapack_int m, lapack_int n, lapack_complex_double* a, lapack_int lda );
-extern void print_rmatrix( char* desc, lapack_int m, lapack_int n, double* a, lapack_int lda );
-void prtdat(int nx, int ny, double * u1, char *fnam);
-
-long long timeval_diff(struct timeval *difference, struct timeval *end_time, struct timeval *start_time);
-
-/****
- * 
- *  THESE ARE EXTRA LINES FOR DRAWING THE PSEUDOSPECTRA 
- * 
- * ****/
-/* Scaling the image for better resolution */
-//#define SCALE 5
-/* Two dimensional array of data for conrec*/
-double **data;
-
-/* Arrays for the x axis and y axis coordinates */
-/****
- * XAXIS AND YAXIS CAN BE BROUGHT FROM THE REAL PART AND IMAGINARY 
- * PART OF z ARRAY CORRESPONDINGLY THAT STORES COMPLEX NUMBERS. 
- * **/
-
+/* Scaling factor for the resolution when printing image */
 #define SCALE 1
 /* Array for the contour levels */
-/***
+/*
  * FOR THE TIME BEING ONLY ONE CORRESPONDING TO e=0.1
- * **/
+ */
 
 const BITMAP4 
 BLACK_COLOR = {0x00, 0x00, 0x00, 0},
@@ -65,129 +54,101 @@ void drawline (BITMAP4 *, double, double, double, double, double);
 int vectorsdrawn = 0;
  FILE *fp;
 
-/* Parameters */
+/* Parameters that should be passed in the command line*/
 #define M 32
 #define N 32
 #define NGRID 50
 #define LDA N
 #define LDU M
 #define LDVT N
-
-/***
- * I WOULD LIKE XMAX TO BE DEFINED AS DOUBLE
- ***/
 #define YMAX      3.41//4                /* maximum boundary of x-axis of the domain */
 #define YMIN     -3.41                 /*minimum*/
 #define XMAX      3.27//4                 /* maximum boundary of y-axis of the domain */
 #define XMIN      -0.91//-4                    /*minimum*/
+#define MAXNEPSILON 32 // unit32_t used for the activity array
 
-/* Main program */
+
 int main(){
         /* not Locals */
         lapack_complex_double *a, *temp, * u, *vt;
-        lapack_int m = M, n = N, lda = LDA, ldu = LDU, ldvt = LDVT, info;
-		
-        /* Local arrays */
-        double _Complex *z;
-		
-		        
+        lapack_int m = M, n = N, lda = LDA,
+          ldu = LDU, ldvt = LDVT, info;
+
+        /* Sores pseudo value (DO I NEED IT)*/
+        double ** PseudoValue;
+        /* Sores for each  (DO I NEED IT)*/
+        uint32_t ** Activity;
+
         /* Time variables */
         struct timeval earlier;
-		struct timeval later;
-		struct timeval interval;
-		
-		double *s;
+        struct timeval later;
+        struct timeval interval;
+
+        double *s;
         double *superb; 
-        int svd_count=0;
-		int i, j ,ix ,iy, index, ii, jj ;    
-		double  x_min,
-				x_max,
-				y_min,
-				y_max,
-				stepx,						/* step size for finding gridpoints coordinates in x and y dimension.*/
-				stepy;
-		double e = 0.1;        
+        int svdPoints=0;
+        int i, j ,ix ,iy, index, ii, jj ;    
+        double  x_min, x_max,
+          y_min, y_max,
+          stepx, stepy;
+
+        double e = 0.1;
 		/* Array used for the ploting of
 		* grid, as an input to the 
 		* draw_pseudospectra function. */
 		double *plot;
 
-		
-		       
         /* Memory alocations*/
 		temp = malloc((lda*m)*sizeof(lapack_complex_double));
 		a = malloc((lda*m)*sizeof(lapack_complex_double));
-		u = malloc((ldu*m)*sizeof(lapack_complex_double));
-		vt = malloc((ldvt*n)*sizeof(lapack_complex_double));
-		s = malloc(m*sizeof(double));
+		// unused u = malloc((ldu*m)*sizeof(lapack_complex_double));
+		// unused vt = malloc((ldvt*n)*sizeof(lapack_complex_double));
+		s = malloc(m*sizeof(double)); // the svd result is here
 		superb = malloc(min(m,n)*sizeof(double));
-		plot = malloc((NGRID*NGRID)*sizeof(double));
+
 		z = malloc((NGRID*NGRID)*sizeof(double _Complex));
-		
-	
+
 		//allocating the 2D array data.
-	  if ((data = malloc(SCALE*NGRID*sizeof(double *))) == NULL) {
+	  if ((PseudoValue = malloc(SCALE*NGRID*sizeof(double *))) == NULL) {
       fprintf(stderr,"Failed to malloc space for the data\n");
       exit(-1);
-   }
-   for (i=0;i<SCALE*NGRID;i++) {
-      if ((data[i] = malloc(SCALE*NGRID*sizeof(double))) == NULL) {
-         fprintf(stderr,"Failed to malloc space for the data\n");
-         exit(-1);
+    }
+    for (i=0;i<SCALE*NGRID;i++) {
+      if ((PseudoValue[i] = calloc(SCALE*NGRID*sizeof(double),0)) == NULL) {
+        fprintf(stderr,"Failed to malloc space for the data\n");
+        exit(-1);
       }
-   }
-   for (i=0;i<SCALE*NGRID;i++){
-      for (j=0;j<SCALE*NGRID;j++){
-         data[i][j] = 0;
-	 //   printf("%f\t",data[i][j]);
-	 }
-		  }
-		
-/*
-		printf("-------------------------------------------------\n");
-		printf("        ---------------------------------           \n");
-		printf ("Starting Computing Pseudopsecta of grcar Matrix\n");
-		printf("Give the doundaries of the 2-dimenional domain\n");
-		printf("Insert the minimum value of x-axis\n");
-		clearerr(stdin);
-		scanf("%lf",&x_min);
-		//getchar();
-		printf("Insert the maximum value of x-axis\n");
-		scanf("%lf",&x_max);
-		printf("Insert the minimum value of y-axis\n");
-		scanf("%lf",&y_min);
-		printf("Insert the maximun value of y-axis\n");
-		scanf("%lf",&y_max);
-		//printf("Give the grid size you want:\n");
-		//scanf("%d",&n);
-*/ 	  
+    }
+
+	  if ((Activity = malloc(NGRID*sizeof(uint32_t *))) == NULL) {
+      fprintf(stderr,"Failed to malloc space for the data\n");
+      exit(-1);
+    }
+    for (i=0;i<NGRID;i++) {
+      if ((Activity[i] = calloc(NGRID*sizeof(uint32_t),0)) == NULL) {
+        fprintf(stderr,"Failed to malloc space for the data\n");
+        exit(-1);
+      }
+    }
+
 		/*if (x_min==0.0)*/  x_min=XMIN;
 		/*if (x_max==0.0)*/  x_max=XMAX;
 		/*if (y_min==0.0)*/  y_min=YMIN;
 		/*if (y_max==0.0)*/  y_max=YMAX;
-	
+
 		/* Initialize grid */
 		printf("The size of the domain is: X=[%f-%f]  Y=[%f-%f] \n",x_min,x_max,y_min,y_max);
-	  
 		stepx=(x_max-x_min)/(NGRID);
 		stepy=(y_max-y_min)/(NGRID);
-		printf("To stepx einai %f\n",stepx);
-		printf("To stepy einai %f\n",stepy);	
-	   
+		printf("Step in x is %f\n",stepx);
+		printf("Step in y is %f\n",stepy); 
 
-		   for (i =0; i <NGRID*NGRID; i++){
-			z[i]=x_min+(i/NGRID * stepx)+(y_min + (i%NGRID * stepy))*I;
-
-		}
 
 	   memset(temp,0,(lda*m)*sizeof(*temp));
 	   memset(a,0,(lda*m)*sizeof(*a));
-	   memset(u,0,(ldu*m)*sizeof(*u));
-	   memset(vt,0,(ldvt*m)*sizeof(*vt));
-		
-	   // edw 8a orisw to -A(to grcar_matrix)
-	   // kai parakatw 8a pros8etw ta diagwnia stoixeia
-	   // tou A	
+	   // memset(u,0,(ldu*m)*sizeof(*u));
+	   // memset(vt,0,(ldvt*m)*sizeof(*vt));
+     // create a gr_car matrix. Do it elsewhere function
 	   j=0;
 	   for (i = 0; i < lda*m ; i=i+n ){	
 			if(i==0){
@@ -222,39 +183,39 @@ int main(){
 				a[i+(j+4)]=lapack_make_complex_double( -1,0);
 				j++;
 			}
-		} 	
-		
-		
-			   /* Starting the timing of the algorithm. */
-	   
-	   if(gettimeofday(&earlier,NULL)) {
-		perror("fifth gettimeofday()");
-		exit(1);
 		}
-		
-		
-		for (iy = 0; iy < NGRID*NGRID; iy++){   
+
+     /* Starting the timing of the algorithm. */
+
+	   if(gettimeofday(&earlier,NULL)) {
+       perror("fifth gettimeofday()");
+       exit(1);
+     }
+
+		for (iy = 0; iy < NGRID*NGRID; iy++){
 			memcpy(temp, a ,(lda*m)*sizeof(*temp));
 			for (i = 0; i < lda*m ; i=i+(n+1)){	
-				temp[i]=a[i]+z[iy];
+				temp[i]=a[i]+(x_min+(iy/NGRID * stepx)+(y_min + (iy%NGRID * stepy))*I); // a + z
 			}
 			/* Executable statements */
 			printf( "LAPACKE_zgesvd (row-major, high-level) Example Program Results(%d,%d)\n",iy/NGRID,iy%NGRID);
 			/* Compute SVD */
-			info = LAPACKE_zgesvd( LAPACK_ROW_MAJOR, 'N', 'N', m, n, temp, lda, s, NULL, ldu, NULL, ldvt, superb );
-			svd_count++;
+			info = LAPACKE_zgesvd( LAPACK_ROW_MAJOR, 'N', 'N',
+                             m, n, temp, lda, s,
+                             NULL, ldu, NULL, ldvt, superb );
+			svdPoints++;
 			if( info > 0 ) {
 				printf( "The algorithm computing SVD failed to converge.\n" );
 				exit( 1 );
-			}		
+			}
+
+
 			if(s[m-1] <= e){
-				printf("THIS ELEMENT BELONGS TO PSEUDOSPECTRA (%d,%d):%6.10f\n",(iy/NGRID+1),(iy%NGRID+1),s[m-1]);
+        //			  Activity[iy] = 0x80;
 				plot[iy]=s[m-1];
 			 }
 			else plot[iy] = 0;
 			//else plot[iy] = s[m-1];
-		
-	
 
 		}
 
@@ -263,12 +224,12 @@ int main(){
 			exit(1);
 		}
 
-       timeval_diff(&interval,&later,&earlier);
-       printf(" (%ld seconds, %ld microseconds)\n", interval.tv_sec, interval.tv_usec);
+    timeval_diff(&interval,&later,&earlier);
+    printf(" (%ld seconds, %ld microseconds)\n", interval.tv_sec, interval.tv_usec);
 
 		
 		prtdat(NGRID, NGRID, plot, "svd_no_disks.mat");
-		printf("Total number of svd evaluations in the %d,%d grid is:\t %d\n",NGRID,NGRID,svd_count);
+		printf("Total number of svd evaluations in the %d,%d grid is:\t %d\n",NGRID,NGRID,svdPoints);
 		
 		
 		
@@ -281,7 +242,7 @@ int main(){
 		
 
 		
-		
+	 
 		#define NCONTOUR 3
 		double contours[NCONTOUR];
 		double *xaxis,*yaxis;		/* Arrays for the x axis and y axis coordinates */
@@ -291,7 +252,7 @@ int main(){
 		
 		
 		//giving values to data from plot
-	for (i = 0; i < NGRID*NGRID; i++)  data[SCALE * (i/NGRID)][SCALE * (i%NGRID)] = plot[i];
+	for (i = 0; i < NGRID*NGRID; i++)  PseudoValue[SCALE * (i/NGRID)][SCALE * (i%NGRID)] = plot[i];
 	  /*  Set up the axis coordinates */
 	   if ((xaxis = malloc(SCALE * NGRID * sizeof(double))) == NULL) {
 		  fprintf(stderr,"Failed to malloc space for the xaxis data\n");
@@ -320,12 +281,12 @@ int main(){
  Erase_Bitmap(image, SCALE * NGRID, SCALE * NGRID, bgcolor); /* Not strictly necessary */
    for ( j = 0; j < SCALE * NGRID; j++ ) {
 	for ( i = 0; i < SCALE * NGRID; i++ ) {
-	  if ( data[i][j] > 0 ) {
-		if ( data[i][j] < contours[0] )
+	  if ( PseudoValue[i][j] > 0 ) {
+		if ( PseudoValue[i][j] < contours[0] )
 		  col = YELLOW_COLOR;
-		else if ( data[i][j] < contours[1] )
+		else if ( PseudoValue[i][j] < contours[1] )
 		  col = GREEN_COLOR;
-		else if ( data[i][j] < contours[2] )
+		else if ( PseudoValue[i][j] < contours[2] )
 		  col = RED_COLOR;
 		else
 		  col = WHITE_COLOR;
@@ -340,7 +301,7 @@ int main(){
   /* Finally do the contouring */
   //CONREC(image, data, 0, SCALE*NGRID-1, 0, SCALE*NGRID-1, z, NCONTOUR, contours, drawline);
   
-  CONREC(image, data, 0, SCALE * NGRID - 1, 0, SCALE * NGRID - 1, 
+  CONREC(image, PseudoValue, 0, SCALE * NGRID - 1, 0, SCALE * NGRID - 1, 
 		 xaxis, yaxis, NCONTOUR, contours, drawline);
    fprintf(stderr,"Drew %d vectors\n",vectorsdrawn);
 
@@ -361,63 +322,6 @@ int main(){
 } /* End of LAPACKE_zgesvd Example */
 
 
-/* Auxiliary routine for timing in miscoseconds */
-long long timeval_diff(struct timeval *difference, struct timeval *end_time, struct timeval *start_time) {
-  
-  struct timeval temp_diff;
-  if(difference == NULL) {
-	difference = &temp_diff;
-  }
-
-  difference->tv_sec = end_time->tv_sec - start_time->tv_sec ;
-  difference->tv_usec = end_time->tv_usec - start_time->tv_usec;
-  
-  while(difference->tv_usec < 0) {
-    difference->tv_usec+= 1000000;
-    difference->tv_sec -= 1;
-  }
-
-  return 1000000LL*difference->tv_sec+
-                   difference->tv_usec;
-
-} /* timeval_diff() */
-
-
-/* Auxiliary routine: printing a matrix */
-void print_matrix( char* desc, lapack_int m, lapack_int n, lapack_complex_double* a, lapack_int lda ) {
-        lapack_int i, j;
-        printf( "\n %s\n", desc );
-        for( i = 0; i < m; i++ ) {
-                for( j = 0; j < n; j++ )  
-                        printf( " (%6.2f,%6.2f)", lapack_complex_double_real(a[i*lda+j]), lapack_complex_double_imag(a[i*lda+j]) );
-                printf( "\n" );
-        }
-}
-
-/* Auxiliary routine: printing a vector of integers */
-void print_int_vector( char* desc, lapack_int n, lapack_int* a ) {
-        lapack_int j;
-        printf( "\n %s\n", desc );
-        for( j = 0; j < n; j++ ) printf( " %6i", a[j] );
-        printf( "\n" );
-}
-
-
- void prtdat(int nx, int ny, double *u1, char *fnam) {
- int ix, iy;
-// FILE *fp;
-// 
- fp = fopen(fnam, "w");
- //fprintf(fp, "%d %d\n", nx, ny);
-   for (ix = 0; ix < nx*ny; ix++) {
-     fprintf(fp, "%6.10f", u1[ix]);
-     if (ix % nx == nx-1) 
-       fprintf(fp, "\n");
-     else
-       fprintf(fp, " ");
-     }
- fclose(fp);
- }
 
 
 void drawline (BITMAP4 *image, double x1, double y1, double x2, double y2, double z)
