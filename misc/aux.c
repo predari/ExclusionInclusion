@@ -27,6 +27,20 @@ long long timeval_diff(struct timeval *difference, struct timeval *end_time, str
 } /* timeval_diff() */
 
 
+void create_grcar( lapack_complex_double *a, lapack_int m, lapack_int lda ) {
+  int i;
+  for (i = 0; i < lda* m ; i++ ) {
+    if( i % (lda+1) == 0 || i % (lda+1) == 1 || i % (lda+1) == 2 || i % (lda+1) == 3 ) 
+      *(a+i) = 1 ;
+    else if( i % (lda+1) == lda )
+      *(a+i) = -1 ;
+    else *(a+i) = 0;
+ }
+}
+
+
+
+
 /* Auxiliary routine: printing a matrix */
 void print_matrix( char* desc, lapack_int m, lapack_int n, lapack_complex_double* a, lapack_int lda ) {
         lapack_int i, j;

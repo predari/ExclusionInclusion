@@ -5,9 +5,12 @@
 #include <lapacke.h>
 
 
-/* printing the content of the matrix*/
+void create_grcar( lapack_complex_double *a,
+                   lapack_int m,
+                   lapack_int lda );
 
-void print_matrix (char* desc,
+/* printing the content of the matrix*/
+void print_matrix (char* desc, // description as a title
                    lapack_int m,
                    lapack_int n,
                    lapack_complex_double* a,
