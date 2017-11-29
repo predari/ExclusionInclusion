@@ -1,3 +1,6 @@
+Previous code can be found in ~/Dropbox/ThesisCeid/mpi-tests/lapacke_tests/exclusion\ tests/
+
+
 The File named svd_no_disks.c implements the GRID method for computing pseudospectra of a matrix.
 NGRID=80 N,M=32 svd_evaluations=6400  
 a random time measurement: (1 seconds, 717358 microseconds)
