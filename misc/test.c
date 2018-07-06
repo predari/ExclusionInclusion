@@ -46,10 +46,11 @@ int main()  {
   /*if (y_min==0.0)*/  y_min=YMIN;
   /*if (y_max==0.0)*/  y_max=YMAX;
 
-  /* Initialize grid with random initial variables */
+  /* Initialize grid */
   stepx=(x_max-x_min)/(GRID);
   stepy=(y_max-y_min)/(GRID);
   printf("Domain size is: X=[%f-%f]  Y=[%f-%f] (stepx=%f, stepy=%f)\n", x_min, x_max, y_min, y_max, stepx, stepy);
+  printf("Grid size is: X=%d  Y=%d \n", GRID,GRID);
 
   double *s;
   double *superb; 
@@ -86,7 +87,6 @@ int main()  {
 	
   for (iy = 0; iy < GRID*GRID; iy++){
     //  memcpy(tmp, a ,(lda*m)*sizeof(*tmp));
-    // tmp is not right!!!
     for (i = 0; i < lda*m ; i=i+(n+1))
       tmp[i]=a[i]+(x_min+(iy/GRID * stepx)+(y_min + (iy%GRID * stepy))*I); // a + z
     
@@ -115,6 +115,8 @@ int main()  {
   for (i = 0; i < m; i++)
     printf("%.2f ", s[i]);
   printf("\n");
+
+  printf("The number of visited gridPoints = %d\n",svdPoints);
   
   free(a);
   free(tmp);
