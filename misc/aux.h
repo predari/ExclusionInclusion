@@ -39,5 +39,10 @@ int grid(lapack_int m, lapack_int n, lapack_int gsize,
 		 lapack_int nbepsilon, double x_min, double x_max, double y_min, double y_max,
 		lapack_complex_double *a, uint32_t * activity );
 
+int svd(lapack_int m, lapack_int n,
+	lapack_int nbepsilon, double * e,
+	lapack_complex_double *a,
+	lapack_int gsize, uint32_t * activity,
+	int center);
 
 #endif

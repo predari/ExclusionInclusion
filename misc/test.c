@@ -124,11 +124,22 @@ int grid(lapack_int m, lapack_int n, lapack_int gsize,
     
     /* Compute SVD */
     info = LAPACKE_zgesvd( LAPACK_ROW_MAJOR, 'N', 'N',
-			   m, n, a, lda, s,
-			   NULL, ldu, NULL, ldvt, superb );
+    			   m, n, a, lda, s,
+    			   NULL, ldu, NULL, ldvt, superb );
+    // the following doesnt work but the above doesn't seem right to me!
+    // why tmp is not used ??? why only a as input to zgesvd ??
+    /* info = LAPACKE_zgesvd( LAPACK_ROW_MAJOR, 'N', 'N', */
+    /* 			   m, n, tmp, lda, s, */
+    /* 			   NULL, ldu, NULL, ldvt, superb ); */
 
+    
 
     *(activity+iy) = 1;
+    printf("The singular values on point (%d) are stored here:\n",iy);
+    for (i = 0; i < m; i++)
+      printf("%.2f ", s[i]);
+    printf("\n");
+
     svdPoints++;  
   }
 
@@ -143,12 +154,6 @@ int grid(lapack_int m, lapack_int n, lapack_int gsize,
 
   timeval_diff(&interval,&later,&earlier);
   printf(" (%ld seconds, %ld microseconds)\n", interval.tv_sec,(long) interval.tv_usec);
-
-  printf("The singular values are stored here:\n");
-  for (i = 0; i < m; i++)
-    printf("%.2f ", s[i]);
-  printf("\n");
-
 
   printf("activity (inside):");
   for (int i = 0; i < gsize * gsize ; i++) {
@@ -166,3 +171,31 @@ int grid(lapack_int m, lapack_int n, lapack_int gsize,
 }
 
 
+
+int svd(lapack_int m, lapack_int n,
+	lapack_int nbepsilon, double * e,
+	lapack_complex_double *a,
+	lapack_int gsize, uint32_t * activity,
+	int center) {
+
+  lapack_int lda = n;
+  lapack_int ldu = m;
+  lapack_int ldvt = n;
+  lapack_int info = 0;
+
+  double *s;
+  double *superb;
+  s = malloc(m*sizeof(double)); //  the singular value results are stores here
+  superb = malloc(min(m,n)*sizeof(double));
+
+  assert(a);
+  assert(activity);
+  
+  /* Compute SVD */
+  info = LAPACKE_zgesvd( LAPACK_ROW_MAJOR, 'N', 'N',
+			 m, n, a, lda, s,
+			 NULL, ldu, NULL, ldvt, superb );
+
+  return 0;
+
+}
