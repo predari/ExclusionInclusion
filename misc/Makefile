@@ -7,6 +7,7 @@
 
 # lapack directory
 LAPACK_DIR:= /usr/local/opt/lapack/lib
+#LAPACK_DIR:=/usr/local/Cellar/lapack/3.8.0/lib
 # not used 
 # INCDIR:= ./include
 # LIBDIR:= ./lib
@@ -17,18 +18,20 @@ program_CXX_SRCS := $(wildcard *.cpp)
 program_C_OBJS := ${program_C_SRCS:.c=.o}
 program_CXX_OBJS := ${program_CXX_SRCS:.cpp=.o}
 program_OBJS := $(program_C_OBJS) $(program_CXX_OBJS)
-program_INCLUDE_DIRS := /usr/local/Cellar/lapack/3.8.0/include
+#program_INCLUDE_DIRS := /usr/local/Cellar/lapack/3.8.0/include
+program_INCLUDE_DIRS := /usr/local/opt/lapack/include
 program_LIBRARY_DIRS := 
 program_LIBRARY_DIRS := $(LAPACK_DIR)
-program_LIBRARIES := lapacke m
+program_LIBRARIES := lapacke m #blas lapack gfortran
 
 CPPFLAGS += $(foreach includedir,$(program_INCLUDE_DIRS),-I$(includedir))
 LDFLAGS += $(foreach librarydir,$(program_LIBRARY_DIRS),-L$(librarydir))
 LDFLAGS += $(foreach library,$(program_LIBRARIES),-l$(library))
 
-CXX := gcc
+
+CXX := gcc-8
 CXXFLAGS := -Wall -std=c99
-#LINK.cc := $(CXX) $(CPPFLAGS) $(LDFLAGS) 
+LINK.cc := $(CXX) $(CPPFLAGS) $(LDFLAGS) 
 
 .PHONY: all clean distclean
 
@@ -42,3 +45,9 @@ clean:
 	@- $(RM) $(program_OBJS)
 
 distclean: clean
+
+
+# install_name_tool -change /usr/local/opt/gcc/lib/gcc/8/libgfortran.5.dylib /usr/local/Cellar/lapack/3.8.0/lib/libgfortran.5.dylib myprogram 
+
+
+# DYLD_LIBRARY_PATH=/usr
