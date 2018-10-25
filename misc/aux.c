@@ -47,7 +47,8 @@ void print_matrix( char* desc, lapack_int m, lapack_int n, lapack_complex_double
         printf( "\n %s\n", desc );
         for( i = 0; i < m; i++ ) {
                 for( j = 0; j < n; j++ )  
-                        printf( " (%6.2f,%6.2f)", lapack_complex_double_real(a[i*lda+j]), lapack_complex_double_imag(a[i*lda+j]) );
+                        printf( " (%6.2f,%6.2f)", lapack_complex_double_real(a[i*lda+j]),
+				lapack_complex_double_imag(a[i*lda+j]) );
                 printf( "\n" );
         }
 }
