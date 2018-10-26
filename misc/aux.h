@@ -2,9 +2,10 @@
 #define AUX_H
 
 #include <lapacke.h>
-#include <lapacke.h>
 
-struct diagnostics diag;
+
+extern struct diagnostics diag;
+extern struct domain dm;
 
 void create_grcar( lapack_complex_double *a,
                    lapack_int m,
@@ -16,6 +17,15 @@ void print_matrix (char* desc, // description as a title
                    lapack_int n,
                    lapack_complex_double* a,
                    lapack_int lda
+                   );
+
+/* multiple a matrix with a scalar a */
+void scalar_matrix_mult (
+                   lapack_int m,
+                   lapack_int n,
+                   lapack_complex_double* a,
+                   lapack_int lda,
+		   int s
                    );
 
 void print_int_vector (char* desc,
@@ -37,14 +47,22 @@ long long timeval_diff (struct timeval *difference,
 
 
 struct diagnostics * pseudospectra(lapack_int m, lapack_int n, lapack_int gsize,
-			  lapack_int nbepsilon, double x_min, double x_max,
-			  double y_min, double y_max,
+			  lapack_int nbepsilon, struct domain * dm,
 			  lapack_complex_double *a, uint32_t * activity );
 
+// todo: grid doesn't use all arguments for far
 double grid(lapack_int m, lapack_int n,
 	lapack_int nbepsilon, double * e,
 	lapack_complex_double *a,
 	lapack_int gsize, uint32_t * activity,
 	int point);
+
+
+double mog(lapack_int m, lapack_int n,
+	   lapack_int nbepsilon, double * e,
+	   struct domain * dm,
+	   lapack_complex_double *a,
+	   lapack_int gsize, uint32_t * activity,
+	   int iy);
 
 #endif

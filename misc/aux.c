@@ -39,6 +39,16 @@ void create_grcar( lapack_complex_double *a, lapack_int m, lapack_int lda ) {
 }
 
 
+void scalar_matrix_mult(lapack_int m, lapack_int n, lapack_complex_double* a, lapack_int lda, int s) {
+        lapack_int i, j;
+
+        for( i = 0; i < m; i++ ) {
+	  for( j = 0; j < n; j++ ) {
+	    //	    lapack_complex_double_real(a[i*lda+j]) = lapack_complex_double_real(a[i*lda+j]) * s;
+	    a[i*lda+j] = a[i*lda+j] * s;
+	  }
+	}
+}
 
 
 /* Auxiliary routine: printing a matrix */
