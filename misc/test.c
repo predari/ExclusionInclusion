@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/time.h>
+//#include <sys/time.h>
 #include <lapacke.h>
 #include <assert.h>
 
@@ -49,6 +49,13 @@ struct domain {
 };
 
 
+struct mog_status {
+  int skip;
+  double ssv;
+};
+
+
+
 int main()  {
   // TODO: 
   /* USER INPUT PARAMETERS */
@@ -72,9 +79,10 @@ int main()  {
 
   a = malloc((lda*m)*sizeof(lapack_complex_double));
   create_grcar(a,m,lda);
-  print_matrix("grcar",m,n,a,lda);	
+  // todo: checkif input matrix is correct!!!!
+  //print_matrix("grcar",m,n,a,lda);	
   scalar_matrix_mult (m, n, a, lda, -1);
-  print_matrix("- grcar",m,n,a,lda);	
+  //print_matrix("- grcar",m,n,a,lda);	
 
   /* Initialize grid */
   struct domain dm;
@@ -88,6 +96,14 @@ int main()  {
   diag = pseudospectra(m, n, gsize, NEPSILON, &dm, a, activity);
   assert(activity);
   assert(diag);
+
+  printf("Input Diagnostics:\n");
+  printf("- Matrix: grcar(%d,%d)\n",m,n);
+  printf("- Gridsize: %d\n",gsize);
+  printf("- Domain size is: X=[%f-%f]  Y=[%f-%f] (stepx=%f, stepy=%f)\n",
+	 dm.x_min, dm.x_max,
+	 dm.y_min, dm.y_max,
+	 dm.stepx, dm.stepy);
 
   printf("Diagnostics:\n");
   timeval_diff(&interval,&diag->later,&diag->earlier);
@@ -111,8 +127,8 @@ int main()  {
   printf("\n");
 
   printf(" - Number of visited gridPoints: %d\n",diag->svdPoints);
-  printf(" - Gain percentage: %d \n",
-	 ((gsize*gsize-diag->svdPoints)/gsize*gsize)*100);
+  printf(" - Gain percentage: %d \%\n",
+	 ((gsize*gsize-diag->svdPoints)/gsize*gsize));
 
   free(a);
   free (activity);
@@ -130,21 +146,15 @@ struct diagnostics * pseudospectra(lapack_int m, lapack_int n, lapack_int gsize,
 				   lapack_complex_double *a, uint32_t * activity ) {
 
   lapack_int lda = n;
-  lapack_int ldu = m;
-  lapack_int ldvt = n;
-  lapack_int info = 0;
+  //lapack_int ldu = m;
+  //lapack_int ldvt = n;
+  //lapack_int info = 0;
   int svdPoints = 0;
   
 
 
-  printf("Domain size is: X=[%f-%f]  Y=[%f-%f] (stepx=%f, stepy=%f)\n",
-	 dm->x_min, dm->x_max,
-	 dm->y_min, dm->y_max,
-	 dm->stepx, dm->stepy);
-  printf("Grid size is: X=%d  Y=%d \n", gsize, gsize);
-
   double ssv;
-
+  struct mog_status * mg = NULL; //malloc(sizeof(struct mog_status));
   lapack_complex_double *acp = NULL;
   assert(nbepsilon != 0);
   // todo: maybe e should be created in the main program
@@ -183,9 +193,11 @@ struct diagnostics * pseudospectra(lapack_int m, lapack_int n, lapack_int gsize,
 
     //ssv = grid(m,n,nbepsilon,e,acp,gsize,activity,iy);
 
-    ssv = mog(m,n,nbepsilon,e,dm,acp,gsize,activity,iy);
-    svdPoints++;
-    diag->ssv[iy] = ssv;
+    mg = mog(m,n,nbepsilon,e,dm,acp,gsize,activity,iy);
+    assert(mg);
+    if(!(mg->skip))
+      svdPoints++;
+    diag->ssv[iy] = mg->ssv;
   }
 
   if(gettimeofday(&diag->later,NULL)) {
@@ -201,7 +213,8 @@ struct diagnostics * pseudospectra(lapack_int m, lapack_int n, lapack_int gsize,
   /*   printf("%d ",*(activity+i)); */
   /* }   */
   /* printf("\n"); */
-  
+  if(mg)
+    free(mg);
   free(acp);
   return diag;
   
@@ -252,7 +265,7 @@ double grid(lapack_int m, lapack_int n,
 
 
 
-double mog(lapack_int m, lapack_int n,
+struct mog_status * mog(lapack_int m, lapack_int n,
 	   lapack_int nbepsilon, double * e,
 	   struct domain * dm,
 	   lapack_complex_double *a,
@@ -270,10 +283,10 @@ double mog(lapack_int m, lapack_int n,
   superb = malloc(min(m,n)*sizeof(double));
   double stepx = 0;
   double stepy = 0;
-  int ir = 0;
-  int jr = 0;
-  int il = gsize;
-  int jl = gsize;
+  //int ir = 0;
+  //int jr = 0;
+  //int il = gsize;
+  //int jl = gsize;
   int start_i = 0;
   int start_j = 0;
   int end_i = gsize;
@@ -286,6 +299,10 @@ double mog(lapack_int m, lapack_int n,
   assert(a);
   assert(activity);
 
+  struct mog_status * mg = malloc(sizeof(struct mog_status));
+  mg->skip = 0;
+  mg->ssv = 0.0;
+  
   /* printf("Gridpoint %d:\n",z); */
   /* printf("---------------------\n"); */
   /* print_matrix("acp",m,n,a,lda);   */
@@ -296,7 +313,8 @@ double mog(lapack_int m, lapack_int n,
   //printf("Pseudospectra with mog\n");
   if(  *(activity+z) == 1) {
     printf("Point:%d is skipped!\n",z);
-    return 0;
+    mg->skip = 1;
+    return mg;
     // todo return a structure for that info. boolean skipped or not and the value of ssv when possible
   }
   info = LAPACKE_zgesvd( LAPACK_ROW_MAJOR, 'N', 'N',
@@ -307,6 +325,7 @@ double mog(lapack_int m, lapack_int n,
     exit( 1 );
   }
   *(activity+z) = 1;
+  mg->ssv = s[m-1]; 
   //printf("Point:%d --> smallest singular value is [%.2f,%.2f,%.2f ... %.2f,%.2f, %.2f] \n",
   //	 z,s[0],s[1],s[2],s[m-3],s[m-2],s[m-1]);
   if(s[m-1] > e[0]) { // first curve
@@ -340,6 +359,6 @@ double mog(lapack_int m, lapack_int n,
   }
   
   free(superb);
-  return s[m-1];
+  return mg;
 
 }

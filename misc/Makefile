@@ -1,5 +1,5 @@
 # Makefile for excusionInclusion tool.
-# Depend from lapack which needs blas
+# Depends from lapack which needs blas
 # add in LDFLAGS the path to lapack
 # include the path where lapacke is
 # link with lapacke (-llapacke)
@@ -28,14 +28,19 @@ CPPFLAGS += $(foreach includedir,$(program_INCLUDE_DIRS),-I$(includedir))
 LDFLAGS += $(foreach librarydir,$(program_LIBRARY_DIRS),-L$(librarydir))
 LDFLAGS += $(foreach library,$(program_LIBRARIES),-l$(library))
 
-
-CXX := gcc-8
+# for my mac 
+#CXX := gcc-8
+# for my linux
+CXX := gcc
 CXXFLAGS := -Wall -std=c99
-LINK.cc := $(CXX) $(CPPFLAGS) $(LDFLAGS) 
+LINK.cc := $(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) 
 
 .PHONY: all clean distclean
 
 all: $(program_NAME)
+
+%.o: %.c aux.h
+	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) -o $@ $<
 
 $(program_NAME): $(program_OBJS)
 	$(CXX) $(CXXFLAGS) $(program_OBJS) -o $(program_NAME) $(LDFLAGS)
@@ -50,4 +55,3 @@ distclean: clean
 # install_name_tool -change /usr/local/opt/gcc/lib/gcc/8/libgfortran.5.dylib /usr/local/Cellar/lapack/3.8.0/lib/libgfortran.5.dylib myprogram 
 
 
-# DYLD_LIBRARY_PATH=/usr

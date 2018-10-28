@@ -2,10 +2,13 @@
 #define AUX_H
 
 #include <lapacke.h>
-
+// todo: check if it complies with macos
+#include <stdint.h>
+#include <sys/time.h>
 
 extern struct diagnostics diag;
 extern struct domain dm;
+extern struct mog_status mg;
 
 void create_grcar( lapack_complex_double *a,
                    lapack_int m,
@@ -58,7 +61,7 @@ double grid(lapack_int m, lapack_int n,
 	int point);
 
 
-double mog(lapack_int m, lapack_int n,
+struct mog_status * mog(lapack_int m, lapack_int n,
 	   lapack_int nbepsilon, double * e,
 	   struct domain * dm,
 	   lapack_complex_double *a,
