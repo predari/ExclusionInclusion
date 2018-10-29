@@ -55,10 +55,11 @@ struct diagnostics * pseudospectra(lapack_int m, lapack_int n, lapack_int gsize,
 
 // todo: grid doesn't use all arguments for far
 double grid(lapack_int m, lapack_int n,
-	lapack_int nbepsilon, double * e,
-	lapack_complex_double *a,
-	lapack_int gsize, uint32_t * activity,
-	int point);
+	    lapack_complex_double *a,
+	    lapack_int gsize,
+	    uint32_t * activity,
+	    int point
+	    );
 
 
 struct mog_status * mog(lapack_int m, lapack_int n,

@@ -191,7 +191,7 @@ struct diagnostics * pseudospectra(lapack_int m, lapack_int n, lapack_int gsize,
     for (int i = 0; i < lda*m ; i=i+(n+1))
       acp[i]=acp[i]+(dm->x_min+(iy/gsize * dm->stepx)+(dm->y_min + (iy % gsize * dm->stepy))*I); // -a + z 
 
-    //ssv = grid(m,n,nbepsilon,e,acp,gsize,activity,iy);
+    //ssv = grid(m,n,acp,gsize,activity,iy);
 
     mg = mog(m,n,nbepsilon,e,dm,acp,gsize,activity,iy);
     assert(mg);
@@ -222,10 +222,10 @@ struct diagnostics * pseudospectra(lapack_int m, lapack_int n, lapack_int gsize,
 
 
 double grid(lapack_int m, lapack_int n,
-	lapack_int nbepsilon, double * e,
-	lapack_complex_double *a,
-	lapack_int gsize, uint32_t * activity,
-	int iy) {
+	    lapack_complex_double *a,
+	    lapack_int gsize,
+	    uint32_t * activity,
+	    int iy) {
 
   lapack_int lda = n;
   lapack_int ldu = m;
