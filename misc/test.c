@@ -68,9 +68,9 @@ int main()  {
   lapack_int m = M, n = N, lda = LDA, ldu = LDU, ldvt = LDVT;
   int svdPoints = 0;
   int gsize = GRID;
-  
-  /* Time variables */
-  struct timeval interval;
+
+  /*     /\* Time variables *\/ */
+  //struct timeval interval;
 
   struct diagnostics * diag = NULL;
   uint32_t * activity =  malloc((gsize*gsize)*sizeof( uint32_t));
@@ -84,51 +84,54 @@ int main()  {
   scalar_matrix_mult (m, n, a, lda, -1);
   //print_matrix("- grcar",m,n,a,lda);	
 
-  /* Initialize grid */
-  struct domain dm;
-  dm.x_min = XMIN;
-  dm.x_max = XMAX;
-  dm.y_min = YMIN;
-  dm.y_max = YMAX;
-  dm.stepx = (dm.x_max - dm.x_min)/gsize;
-  dm.stepy=(dm.y_max - dm.y_min)/gsize;
-   
+  struct domain dm; 
+  /* /\* Initialize grid *\/ */
+  /* dm.x_min = XMIN; */
+  /* dm.x_max = XMAX; */
+  /* dm.y_min = YMIN; */
+  /* dm.y_max = YMAX; */
+  /* dm.stepx = (dm.x_max - dm.x_min)/gsize; */
+  /* dm.stepy=(dm.y_max - dm.y_min)/gsize; */
+  initDomain(&dm, gsize, XMIN, XMAX, YMIN, YMAX);
   diag = pseudospectra(m, n, gsize, NEPSILON, &dm, a, activity);
   assert(activity);
   assert(diag);
 
-  printf("Input Diagnostics:\n");
-  printf("- Matrix: grcar(%d,%d)\n",m,n);
-  printf("- Gridsize: %d\n",gsize);
-  printf("- Domain size is: X=[%f-%f]  Y=[%f-%f] (stepx=%f, stepy=%f)\n",
-	 dm.x_min, dm.x_max,
-	 dm.y_min, dm.y_max,
-	 dm.stepx, dm.stepy);
-
-  printf("Diagnostics:\n");
-  timeval_diff(&interval,&diag->later,&diag->earlier);
-  printf("- Time: (%ld seconds, %ld microseconds)\n",
-	 interval.tv_sec,(long) interval.tv_usec);
-  assert(diag->ssv);
-  printf("- Ssv table: ");
-  for (int i = 0; i < gsize * gsize ; i++) {
-    if(!(i % gsize))
-      printf("\n");
-    printf("%.2f ",diag->ssv[i]);
-  }  
-  printf("\n");  
+  //printDiagnostics(m, n, &dm, gsize, diag, activity);
+		     
   
-  printf("- Activity table: ");
-  for (int i = 0; i < gsize * gsize ; i++) {
-    if(!(i % gsize))
-      printf("\n");
-    printf("%d ",activity[i]);
-  }  
-  printf("\n");
+  /* printf("Input Diagnostics:\n"); */
+  /* printf("- Matrix: grcar(%d,%d)\n",m,n); */
+  /* printf("- Gridsize: %d\n",gsize); */
+  /* printf("- Domain size is: X=[%f-%f]  Y=[%f-%f] (stepx=%f, stepy=%f)\n", */
+  /* 	 dm.x_min, dm.x_max, */
+  /* 	 dm.y_min, dm.y_max, */
+  /* 	 dm.stepx, dm.stepy); */
 
-  printf(" - Number of visited gridPoints: %d\n",diag->svdPoints);
-  printf(" - Gain percentage: %d \%\n",
-	 ((gsize*gsize-diag->svdPoints)/gsize*gsize));
+  /* printf("Diagnostics:\n"); */
+  /* timeval_diff(&interval,&diag->later,&diag->earlier); */
+  /* printf("- Time: (%ld seconds, %ld microseconds)\n", */
+  /* 	 interval.tv_sec,(long) interval.tv_usec); */
+  /* assert(diag->ssv); */
+  /* printf("- Ssv table: "); */
+  /* for (int i = 0; i < gsize * gsize ; i++) { */
+  /*   if(!(i % gsize)) */
+  /*     printf("\n"); */
+  /*   printf("%.2f ",diag->ssv[i]); */
+  /* } */
+  /* printf("\n"); */
+  
+  /* printf("- Activity table: "); */
+  /* for (int i = 0; i < gsize * gsize ; i++) { */
+  /*   if(!(i % gsize)) */
+  /*     printf("\n"); */
+  /*   printf("%d ",activity[i]); */
+  /* } */
+  /* printf("\n"); */
+
+  /* printf(" - Number of visited gridPoints: %d\n",diag->svdPoints); */
+  /* printf(" - Gain percentage: %d \%\n", */
+  /* 	 ((gsize*gsize-diag->svdPoints)/gsize*gsize)); */
 
   free(a);
   free (activity);
@@ -180,10 +183,10 @@ struct diagnostics * pseudospectra(lapack_int m, lapack_int n, lapack_int gsize,
     exit(1);
   }
 
-  //printf("Pseudospectra with grid\n");
+
   printf("Pseudospectra with mog\n");  
   for (int iy = 0; iy < gsize*gsize; iy++){
-    // recreating original matrix, since zgesvd writes on it (acp)
+    // reload original matrix, since zgesvd writes on it (acp)
     create_grcar(acp, m,lda);
     scalar_matrix_mult (m, n, acp, lda, -1);
     //print_matrix("- grcar",m,n,a,lda);	
@@ -192,7 +195,6 @@ struct diagnostics * pseudospectra(lapack_int m, lapack_int n, lapack_int gsize,
       acp[i]=acp[i]+(dm->x_min+(iy/gsize * dm->stepx)+(dm->y_min + (iy % gsize * dm->stepy))*I); // -a + z 
 
     //ssv = grid(m,n,acp,gsize,activity,iy);
-
     mg = mog(m,n,nbepsilon,e,dm,acp,gsize,activity,iy);
     assert(mg);
     if(!(mg->skip))
@@ -234,7 +236,7 @@ double grid(lapack_int m, lapack_int n,
 
   double *s;
   double *superb;
-  s = malloc(m*sizeof(double)); // holds singular values
+  s = malloc(m*sizeof(double));
   superb = malloc(min(m,n)*sizeof(double));
   assert(a);
   assert(activity);
@@ -255,9 +257,10 @@ double grid(lapack_int m, lapack_int n,
     exit( 1 );
   }
   *(activity+iy) = 1;
-  printf("Point:%d --> smallest singular value is [%.2f,%.2f,%.2f ... %.2f,%.2f, %.2f] \n",
-	 iy,s[0],s[1],s[2],s[m-3],s[m-2],s[m-1]);
+  printf("Point:%d ssv:[%.2f,%.2f,%.2f ... %.2f,%.2f, %.2f]\n",
+	 iy, s[0], s[1], s[2], s[m-3], s[m-2], s[m-1]);
 
+  
   free(superb);
   return s[m-1];
 
@@ -281,21 +284,6 @@ struct mog_status * mog(lapack_int m, lapack_int n,
   double *superb;
   s = malloc(m*sizeof(double)); // holds the singular values
   superb = malloc(min(m,n)*sizeof(double));
-  double stepx = 0;
-  double stepy = 0;
-  //int ir = 0;
-  //int jr = 0;
-  //int il = gsize;
-  //int jl = gsize;
-  int start_i = 0;
-  int start_j = 0;
-  int end_i = gsize;
-  int end_j = gsize;
-  // todo: i indexes lines of matrix so [i-stepy, i, i+stepy] changes lines
-  // todo: j indexes columns of matrix so [j-stepx, j, j+stepx] changes columns 
-  
-  int i = z/gsize;
-  int j = z%gsize;
   assert(a);
   assert(activity);
 
@@ -315,7 +303,6 @@ struct mog_status * mog(lapack_int m, lapack_int n,
     printf("Point:%d is skipped!\n",z);
     mg->skip = 1;
     return mg;
-    // todo return a structure for that info. boolean skipped or not and the value of ssv when possible
   }
   info = LAPACKE_zgesvd( LAPACK_ROW_MAJOR, 'N', 'N',
 			 m, n, a, lda, s,
@@ -326,12 +313,85 @@ struct mog_status * mog(lapack_int m, lapack_int n,
   }
   *(activity+z) = 1;
   mg->ssv = s[m-1]; 
-  //printf("Point:%d --> smallest singular value is [%.2f,%.2f,%.2f ... %.2f,%.2f, %.2f] \n",
-  //	 z,s[0],s[1],s[2],s[m-3],s[m-2],s[m-1]);
-  if(s[m-1] > e[0]) { // first curve
-    stepx = ceil((s[m-1] - e[0])/dm->stepx);
-    stepy = ceil((s[m-1] - e[0])/dm->stepy);
-    //printf("Disk c:%d s[m-1] - e[0]=%f and dm->stepx=%f ( %f , %f )\n", iy,s[m-1] - e[0], dm->stepx, stepx, stepy);
+  if(s[m-1] > e[0]) {// first curve
+    printf("Excluding disk (%d,%.2f)\n",z, s[m-1]-e[0]);
+    excludeDisk(s[m-1]-e[0], z, gsize, dm, activity);
+  }
+  free(superb);
+  return mg;
+
+}
+
+
+
+struct mog_status * mmog(lapack_int m, lapack_int n,
+			lapack_int nbepsilon, double * e,
+			struct domain * dm,
+			lapack_complex_double *a,
+			lapack_int gsize,
+			uint32_t * activity,
+			int z) {
+  
+  lapack_int lda = n;
+  lapack_int ldu = m;
+  lapack_int ldvt = n;
+  lapack_int info = 0;
+
+  double *s;
+  double *superb;
+  s = malloc(m*sizeof(double));
+  superb = malloc(min(m,n)*sizeof(double));
+  assert(a);
+  assert(activity);
+
+  struct mog_status * mg = malloc(sizeof(struct mog_status));
+  mg->skip = 0;
+  mg->ssv = 0.0;
+  
+  if(  *(activity+z) == 1) {
+    printf("Point:%d is skipped!\n",z);
+    mg->skip = 1;
+    return mg;
+  }
+  info = LAPACKE_zgesvd( LAPACK_ROW_MAJOR, 'N', 'N',
+			 m, n, a, lda, s,
+			 NULL, ldu, NULL, ldvt, superb );
+  if( info > 0 ) {
+    printf( "- SVD convergence: failed \n" );
+    exit( 1 );
+  }
+  *(activity+z) = 1;
+  mg->ssv = s[m-1]; 
+  if(s[m-1] > e[0]) {// first curve
+    printf("Excluding disk (%d,%.2f)\n",z, s[m-1]-e[0]);
+    excludeDisk(s[m-1]-e[0], z, gsize, dm, activity);
+  }
+  free(superb);
+  return mg;
+
+}
+
+
+
+
+void excludeDisk(double radius, int center, int gsize, struct domain * dm, uint32_t * activity) {
+
+  double stepx = 0.0;
+  double stepy = 0.0;
+  int start_i = 0;
+  int start_j = 0;
+  int end_i = gsize;
+  int end_j = gsize;
+  // todo: i indexes lines of matrix so [i-stepy, i, i+stepy] changes lines
+  // todo: j indexes columns of matrix so [j-stepx, j, j+stepx] changes columns 
+  
+
+  stepx = ceil(radius/dm->stepx);
+  stepy = ceil(radius/dm->stepy);
+  //printf("Disk c:%d s[m-1] - e[0]=%f and dm->stepx=%f ( %f , %f )\n", iy,s[m-1] - e[0], dm->stepx, stepx, stepy);
+  int i = center/gsize;
+  int j = center%gsize;
+
     start_i = i - stepy;
     if( start_i < 0 )
       start_i = 0;
@@ -346,7 +406,7 @@ struct mog_status * mog(lapack_int m, lapack_int n,
       end_j = gsize - 1;
 
     printf("array of z%d:(%d,%d) == start:(%d,%d) // end:(%d,%d) stepx: %f, stepy:%f \n",
-	   z,i,j,start_i,start_j, end_i,end_j,stepx,stepy);
+	   center,i,j,start_i,start_j, end_i,end_j,stepx,stepy);
     for (int i = start_i ; i < end_i + 1; i++){
       for (int j = start_j ; j < end_j + 1; j++){
 	//if (j < end_j) {
@@ -356,9 +416,63 @@ struct mog_status * mog(lapack_int m, lapack_int n,
 	  //else continue;
       }
     }
-  }
+}
+
+
+void initDomain(struct domain *dm, int gsize, int xmin, int xmax, int ymin, int ymax) {
   
-  free(superb);
-  return mg;
+  dm->x_min = xmin;
+  dm->x_max = xmax;
+  dm->y_min = ymin;
+  dm->y_max = ymax;
+  dm->stepx = (dm->x_max - dm->x_min)/gsize;
+  dm->stepy=(dm->y_max - dm->y_min)/gsize;
+
+}
+
+
+
+void printDiagnostics(lapack_int m, lapack_int n,
+		      struct domain *dm,
+		      int gsize,
+		      struct diagnostics * diag,
+		      uint32_t * activity
+		      ) {
+
+    /* Time variables */
+  struct timeval interval;
+  
+  printf("Input Diagnostics:\n");
+  printf("- Matrix: grcar(%d,%d)\n",m,n);
+  printf("- Gridsize: %d\n",gsize);
+  printf("- Domain size is: X=[%f-%f]  Y=[%f-%f] (stepx=%f, stepy=%f)\n",
+	 dm->x_min, dm->x_max,
+	 dm->y_min, dm->y_max,
+	 dm->stepx, dm->stepy);
+
+  printf("Diagnostics:\n");
+  timeval_diff(&interval,&diag->later,&diag->earlier);
+  printf("- Time: (%ld seconds, %ld microseconds)\n",
+	 interval.tv_sec,(long) interval.tv_usec);
+  assert(diag->ssv);
+  printf("- Ssv table: ");
+  for (int i = 0; i < gsize * gsize ; i++) {
+    if(!(i % gsize))
+      printf("\n");
+    printf("%.2f ",diag->ssv[i]);
+  }  
+  printf("\n");  
+  
+  printf("- Activity table: ");
+  for (int i = 0; i < gsize * gsize ; i++) {
+    if(!(i % gsize))
+      printf("\n");
+    printf("%d ",activity[i]);
+  }  
+  printf("\n");
+
+  printf(" - Number of visited gridPoints: %d\n",diag->svdPoints);
+  printf(" - Gain percentage: %d \%\n",
+	 ((gsize*gsize-diag->svdPoints)/gsize*gsize));
 
 }

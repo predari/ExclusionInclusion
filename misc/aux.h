@@ -69,4 +69,33 @@ struct mog_status * mog(lapack_int m, lapack_int n,
 	   lapack_int gsize, uint32_t * activity,
 	   int iy);
 
+struct mog_status * mmog(lapack_int m, lapack_int n,
+			lapack_int nbepsilon, double * e,
+			struct domain * dm,
+			lapack_complex_double *a,
+			lapack_int gsize,
+			uint32_t * activity,
+			 int z);
+
+
+void excludeDisk( double radius,
+		  int center,
+		  int gsize,
+		  struct domain * dm,
+		  uint32_t * activity
+		  );
+
+void initDomain( struct domain *dm,
+		 int gsize,
+		 int xmin, int xmax,
+		 int ymin, int ymax);
+
+void printDiagnostics(lapack_int m, lapack_int n,
+		      struct domain *dm,
+		      int gsize,
+		      struct diagnostics * diag,
+		      uint32_t * activity
+		      );
+
+
 #endif
