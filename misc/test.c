@@ -323,14 +323,27 @@ struct mog_status * mmog(lapack_int m, lapack_int n,
   superb = malloc(min(m,n)*sizeof(double));
   assert(a);
   assert(activity);
+  int evalue[nbepsilon];
+  for(int i = 0; i < nbepsilon; i++) {
+    evalue[i] = i + 1;
+  }
+  uint32_t eactivity[nbepsilon][gsize*gsize];
+  // todo: code is not ready!
+  for(int i = 0; i < gsize*gsize; i++) {
+    for(int j = 0; j < nbepsilon; j++) {
+      if(activity[i] > 0 && activity[i] <= evalue[j]) {
+	eactivity[j][i] = evalue[j];
+	break;
+      }
+    }
+  }
 
   struct mog_status * mg = malloc(sizeof(struct mog_status));
   struct disk * dk = malloc(sizeof(struct disk));
   mg->skip = 0;
   mg->ssv = 0.0;
   
-  for(int i = 0; i < nbepsilon; i++) {
-  }
+
   if(*(activity+z) == 1) {
     printf("Point:%d is skipped!\n",z);
     mg->skip = 1;
