@@ -9,6 +9,7 @@
 extern struct diagnostics diag;
 extern struct domain dm;
 extern struct mog_status mg;
+extern struct disk dk;
 
 void create_grcar( lapack_complex_double *a,
                    lapack_int m,
@@ -77,13 +78,23 @@ struct mog_status * mmog(lapack_int m, lapack_int n,
 			uint32_t * activity,
 			 int z);
 
+void excludeDisk(int gsize,
+		 struct disk * dk,
+		 uint32_t * activity,
+		 int value);
 
-void excludeDisk( double radius,
-		  int center,
-		  int gsize,
-		  struct domain * dm,
-		  uint32_t * activity
-		  );
+void locateDisk(double radius,
+		int center,
+		int gsize,
+		struct domain * dm,
+		struct disk *dk);
+
+void locateExcludeDisk( double radius,
+			int center,
+			int gsize,
+			struct domain * dm,
+			uint32_t * activity
+			);
 
 void initDomain( struct domain *dm,
 		 int gsize,

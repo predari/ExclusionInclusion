@@ -54,6 +54,13 @@ struct mog_status {
   double ssv;
 };
 
+struct disk {
+  int si;
+  int ei;
+  int sj;
+  int ej;
+};
+
 
 
 int main()  {
@@ -85,54 +92,13 @@ int main()  {
   //print_matrix("- grcar",m,n,a,lda);	
 
   struct domain dm; 
-  /* /\* Initialize grid *\/ */
-  /* dm.x_min = XMIN; */
-  /* dm.x_max = XMAX; */
-  /* dm.y_min = YMIN; */
-  /* dm.y_max = YMAX; */
-  /* dm.stepx = (dm.x_max - dm.x_min)/gsize; */
-  /* dm.stepy=(dm.y_max - dm.y_min)/gsize; */
   initDomain(&dm, gsize, XMIN, XMAX, YMIN, YMAX);
   diag = pseudospectra(m, n, gsize, NEPSILON, &dm, a, activity);
   assert(activity);
   assert(diag);
-
-  //printDiagnostics(m, n, &dm, gsize, diag, activity);
+  printDiagnostics(m, n, &dm, gsize, diag, activity);
 		     
   
-  /* printf("Input Diagnostics:\n"); */
-  /* printf("- Matrix: grcar(%d,%d)\n",m,n); */
-  /* printf("- Gridsize: %d\n",gsize); */
-  /* printf("- Domain size is: X=[%f-%f]  Y=[%f-%f] (stepx=%f, stepy=%f)\n", */
-  /* 	 dm.x_min, dm.x_max, */
-  /* 	 dm.y_min, dm.y_max, */
-  /* 	 dm.stepx, dm.stepy); */
-
-  /* printf("Diagnostics:\n"); */
-  /* timeval_diff(&interval,&diag->later,&diag->earlier); */
-  /* printf("- Time: (%ld seconds, %ld microseconds)\n", */
-  /* 	 interval.tv_sec,(long) interval.tv_usec); */
-  /* assert(diag->ssv); */
-  /* printf("- Ssv table: "); */
-  /* for (int i = 0; i < gsize * gsize ; i++) { */
-  /*   if(!(i % gsize)) */
-  /*     printf("\n"); */
-  /*   printf("%.2f ",diag->ssv[i]); */
-  /* } */
-  /* printf("\n"); */
-  
-  /* printf("- Activity table: "); */
-  /* for (int i = 0; i < gsize * gsize ; i++) { */
-  /*   if(!(i % gsize)) */
-  /*     printf("\n"); */
-  /*   printf("%d ",activity[i]); */
-  /* } */
-  /* printf("\n"); */
-
-  /* printf(" - Number of visited gridPoints: %d\n",diag->svdPoints); */
-  /* printf(" - Gain percentage: %d \%\n", */
-  /* 	 ((gsize*gsize-diag->svdPoints)/gsize*gsize)); */
-
   free(a);
   free (activity);
   if (diag)
@@ -287,6 +253,7 @@ struct mog_status * mog(lapack_int m, lapack_int n,
   assert(a);
   assert(activity);
 
+  struct disk * dk = malloc(sizeof(struct disk));
   struct mog_status * mg = malloc(sizeof(struct mog_status));
   mg->skip = 0;
   mg->ssv = 0.0;
@@ -315,8 +282,20 @@ struct mog_status * mog(lapack_int m, lapack_int n,
   mg->ssv = s[m-1]; 
   if(s[m-1] > e[0]) {// first curve
     printf("Excluding disk (%d,%.2f)\n",z, s[m-1]-e[0]);
-    excludeDisk(s[m-1]-e[0], z, gsize, dm, activity);
+    locateDisk(s[m-1]-e[0], z, gsize, dm, dk);
+    excludeDisk(gsize, dk, activity,1);
+    //locateExcludeDisk(s[m-1]-e[0], z, gsize, dm, activity);
+    printf("activity (inside):");
+    for (int i = 0; i < gsize * gsize ; i++) {
+      if(!(i % gsize))
+        printf("\n");
+      printf("%d ",*(activity+i));
+    }
+    printf("\n");
+
   }
+  
+  free(dk);
   free(superb);
   return mg;
 
@@ -329,6 +308,7 @@ struct mog_status * mmog(lapack_int m, lapack_int n,
 			struct domain * dm,
 			lapack_complex_double *a,
 			lapack_int gsize,
+			 // uint32_t ** activity,
 			uint32_t * activity,
 			int z) {
   
@@ -345,10 +325,13 @@ struct mog_status * mmog(lapack_int m, lapack_int n,
   assert(activity);
 
   struct mog_status * mg = malloc(sizeof(struct mog_status));
+  struct disk * dk = malloc(sizeof(struct disk));
   mg->skip = 0;
   mg->ssv = 0.0;
   
-  if(  *(activity+z) == 1) {
+  for(int i = 0; i < nbepsilon; i++) {
+  }
+  if(*(activity+z) == 1) {
     printf("Point:%d is skipped!\n",z);
     mg->skip = 1;
     return mg;
@@ -364,8 +347,11 @@ struct mog_status * mmog(lapack_int m, lapack_int n,
   mg->ssv = s[m-1]; 
   if(s[m-1] > e[0]) {// first curve
     printf("Excluding disk (%d,%.2f)\n",z, s[m-1]-e[0]);
-    excludeDisk(s[m-1]-e[0], z, gsize, dm, activity);
+    locateDisk(s[m-1]-e[0], z, gsize, dm, dk);
+    excludeDisk(gsize, dk, activity,1);
   }
+  
+  free(dk);
   free(superb);
   return mg;
 
@@ -373,8 +359,7 @@ struct mog_status * mmog(lapack_int m, lapack_int n,
 
 
 
-
-void excludeDisk(double radius, int center, int gsize, struct domain * dm, uint32_t * activity) {
+void locateDisk(double radius, int center, int gsize, struct domain * dm, struct disk *dk) {
 
   double stepx = 0.0;
   double stepy = 0.0;
@@ -385,10 +370,11 @@ void excludeDisk(double radius, int center, int gsize, struct domain * dm, uint3
   // todo: i indexes lines of matrix so [i-stepy, i, i+stepy] changes lines
   // todo: j indexes columns of matrix so [j-stepx, j, j+stepx] changes columns 
   
-
+  assert(dk && dm);  
   stepx = ceil(radius/dm->stepx);
   stepy = ceil(radius/dm->stepy);
-  //printf("Disk c:%d s[m-1] - e[0]=%f and dm->stepx=%f ( %f , %f )\n", iy,s[m-1] - e[0], dm->stepx, stepx, stepy);
+  printf("gsize=%d\n",gsize);
+  printf("Disk c:%d radius=%.2f and dm->stepx=%f ( %f , %f )\n", center,radius, dm->stepx, stepx, stepy);
   int i = center/gsize;
   int j = center%gsize;
 
@@ -405,8 +391,64 @@ void excludeDisk(double radius, int center, int gsize, struct domain * dm, uint3
     if( end_j > gsize - 1)
       end_j = gsize - 1;
 
-    printf("array of z%d:(%d,%d) == start:(%d,%d) // end:(%d,%d) stepx: %f, stepy:%f \n",
-	   center,i,j,start_i,start_j, end_i,end_j,stepx,stepy);
+  
+    dk->si = start_i;
+    dk->ei = end_i;
+    dk->sj = start_j;
+    dk->ej = end_j;
+    printf("Disk start=(%d,%d), end=(%d,%d)\n",dk->si,dk->sj, dk->ei,dk->ej);
+
+
+}
+
+
+void excludeDisk(int gsize, struct disk * dk, uint32_t * activity, int value) {
+  assert(dk && activity);
+  for (int i = dk->si ; i < dk->ei + 1; i++){
+    for (int j = dk->sj ; j < dk->ej + 1; j++){
+      //if (j < end_j) {
+      printf("point %d(%d,%d) in disk!\n",i*gsize + j, i, j);
+      *(activity+( i*gsize + j) ) = value; // 1
+      //}
+      //else continue;
+    }
+  }
+}
+
+
+
+void locateExcludeDisk(double radius, int center, int gsize, struct domain * dm, uint32_t * activity) {
+
+  double stepx = 0.0;
+  double stepy = 0.0;
+  int start_i = 0;
+  int start_j = 0;
+  int end_i = gsize;
+  int end_j = gsize;
+  // todo: i indexes lines of matrix so [i-stepy, i, i+stepy] changes lines
+  // todo: j indexes columns of matrix so [j-stepx, j, j+stepx] changes columns 
+  
+
+  stepx = ceil(radius/dm->stepx);
+  stepy = ceil(radius/dm->stepy);
+  printf("Disk c:%d radius=%f and dm->stepx=%f ( %f , %f )\n", center,radius, dm->stepx, stepx, stepy);
+  int i = center/gsize;
+  int j = center%gsize;
+
+    start_i = i - stepy;
+    if( start_i < 0 )
+      start_i = 0;
+    start_j = j - stepx;
+    if( start_j < 0 )
+      start_j = 0;
+    end_i = i + stepy;
+    if( end_i > gsize - 1 )
+      end_i = gsize - 1;
+    end_j = j + stepx;
+    if( end_j > gsize - 1)
+      end_j = gsize - 1;
+
+    printf("Disk start=(%d,%d), end=(%d,%d)\n",start_i,start_j, end_i,end_j);
     for (int i = start_i ; i < end_i + 1; i++){
       for (int j = start_j ; j < end_j + 1; j++){
 	//if (j < end_j) {
