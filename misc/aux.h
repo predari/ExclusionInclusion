@@ -78,6 +78,11 @@ struct mog_status * mmog(lapack_int m, lapack_int n,
 			uint32_t * activity,
 			 int z);
 
+void mergeActivity( int nbepsilon,
+		    uint32_t *eactivity[],
+		    uint32_t * activity,
+		    int gsize);
+
 void excludeDisk(int gsize,
 		 struct disk * dk,
 		 uint32_t * activity,
