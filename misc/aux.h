@@ -101,10 +101,10 @@ void locateExcludeDisk( double radius,
 			uint32_t * activity
 			);
 
-void initDomain( struct domain *dm,
-		 int gsize,
-		 int xmin, int xmax,
-		 int ymin, int ymax);
+void initDomain(struct domain *dm,
+		int gsize,
+		double xmin, double xmax,
+		double ymin, double ymax);
 
 void printDiagnostics(lapack_int m, lapack_int n,
 		      struct domain *dm,

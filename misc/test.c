@@ -11,7 +11,7 @@
 
 #define M 20 // first diminsion of matrix
 #define N 20 // second diminsion of matrix
-#define GRID 10 // grid size
+#define GRID 20 // grid size
 #define LDA N
 #define LDU M
 #define LDVT N
@@ -24,10 +24,12 @@
 // later on we should use one of the following methods: Gresh. Disk, FoV, matrix norms, QR
 // see notes on which one is more appropriate for us.
 
-#define YMAX      3.41
-#define YMIN     -3.41
-#define XMAX      3.27
-#define XMIN      -0.91                 
+// fov -0.6368    2.9736   -3.1160    3.1160
+//      -0.91     3.27     -3.41      3.41
+#define YMAX    3.1160  
+#define YMIN    -3.1160
+#define XMAX     2.9736
+#define XMIN    -0.6368                  
 
 #define min(a,b) ((a)>(b)?(b):(a))
 
@@ -70,13 +72,12 @@ int main()  {
   /*   - m, n */
   /*   - GRID */
   /*   - a */
-  /*   - XMIN, XMAX, YMIN, YMAX */
+  /*   - XMIN, XMAX, YMIN, YMAX */  // check that min<max
   lapack_complex_double *a = NULL;
   lapack_int m = M, n = N, lda = LDA, ldu = LDU, ldvt = LDVT;
   int svdPoints = 0;
   int gsize = GRID;
 
-  /*     /\* Time variables *\/ */
   //struct timeval interval;
 
   struct diagnostics * diag = NULL;
@@ -86,13 +87,12 @@ int main()  {
 
   a = malloc((lda*m)*sizeof(lapack_complex_double));
   create_grcar(a,m,lda);
-  // todo: checkif input matrix is correct!!!!
   //print_matrix("grcar",m,n,a,lda);	
-  scalar_matrix_mult (m, n, a, lda, -1);
-  //print_matrix("- grcar",m,n,a,lda);	
 
-  struct domain dm; 
+  struct domain dm;
   initDomain(&dm, gsize, XMIN, XMAX, YMIN, YMAX);
+
+  
   diag = pseudospectra(m, n, gsize, NEPSILON, &dm, a, activity);
   assert(activity);
   assert(diag);
@@ -130,6 +130,7 @@ struct diagnostics * pseudospectra(lapack_int m, lapack_int n, lapack_int gsize,
   double e[nbepsilon];
   assert(a);
   assert(activity);
+  assert(dm);
 
   /* Diagnostic variables */
   struct diagnostics * diag = malloc(sizeof(struct diagnostics));
@@ -149,16 +150,13 @@ struct diagnostics * pseudospectra(lapack_int m, lapack_int n, lapack_int gsize,
     exit(1);
   }
 
-  
   for (int iy = 0; iy < gsize*gsize; iy++){
     // reload original matrix, since zgesvd writes on it (acp)
     create_grcar(acp, m,lda);
-    scalar_matrix_mult (m, n, acp, lda, -1);
-    //print_matrix("- grcar",m,n,a,lda);	
-
+    //print_matrix("grcar acp",m,n,acp,lda);
     for (int i = 0; i < lda*m ; i=i+(n+1))
-      acp[i]=acp[i]+(dm->x_min+(iy/gsize * dm->stepx)+(dm->y_min + (iy % gsize * dm->stepy))*I); // -a + z 
-    
+      acp[i]=acp[i]-(dm->x_min+(iy/gsize * dm->stepx)+(dm->y_min + (iy % gsize * dm->stepy))*I);
+       
     ssv = grid(m,n,acp,gsize,activity,iy);
     //mg = mog(m,n,nbepsilon,e,dm,acp,gsize,activity,iy);
     //mg = mmog(m,n,nbepsilon,e,dm,acp,gsize,activity,iy);
@@ -224,7 +222,6 @@ double grid(lapack_int m, lapack_int n,
   // for some reason zgesvd overwrites a even though
   // I have N N in the 2nd 3rd arguments
   // so I have to clear it or something like that.
-
   info = LAPACKE_zgesvd( LAPACK_ROW_MAJOR, 'N', 'N',
 			 m, n, a, lda, s,
 			 NULL, ldu, NULL, ldvt, superb );
@@ -267,19 +264,13 @@ struct mog_status * mog(lapack_int m, lapack_int n,
   mg->skip = 0;
   mg->ssv = 0.0;
   
-  /* printf("Gridpoint %d:\n",z); */
-  /* printf("---------------------\n"); */
-  /* print_matrix("acp",m,n,a,lda);   */
-  /* Compute SVD */
-  // for some reason zgesvd overwrites a even though
-  // I have N N in the 2nd 3rd arguments
-  // so I have to clear it or something like that.
-  //printf("Pseudospectra with mog\n");
+
   if(  *(activity+z) == 1) {
     printf("Point:%d is skipped!\n",z);
     mg->skip = 1;
     return mg;
   }
+  
   info = LAPACKE_zgesvd( LAPACK_ROW_MAJOR, 'N', 'N',
 			 m, n, a, lda, s,
 			 NULL, ldu, NULL, ldvt, superb );
@@ -288,9 +279,11 @@ struct mog_status * mog(lapack_int m, lapack_int n,
     exit( 1 );
   }
   *(activity+z) = 1;
-  mg->ssv = s[m-1]; 
+  mg->ssv = s[m-1];
+  printf("Point %d is svded with value %.4f!\n",z, s[m-1]);
+  
   if(s[m-1] > e[0]) {// first curve
-    printf("Excluding disk (%d,%.2f)\n",z, s[m-1]-e[0]);
+    printf("Excluding disk (%d,%.4f)\n",z, s[m-1]-e[0]);
     locateDisk(s[m-1]-e[0], z, gsize, dm, dk);
     excludeDisk(gsize, dk, activity,1);
     //locateExcludeDisk(s[m-1]-e[0], z, gsize, dm, activity);
@@ -425,8 +418,8 @@ void mergeActivity( int nbepsilon,uint32_t ** eactivity,uint32_t * activity, int
 
 void locateDisk(double radius, int center, int gsize, struct domain * dm, struct disk *dk) {
 
-  double stepx = 0.0;
-  double stepy = 0.0;
+  int stepx = 0;
+  int stepy = 0;
   int start_i = 0;
   int start_j = 0;
   int end_i = gsize;
@@ -435,9 +428,12 @@ void locateDisk(double radius, int center, int gsize, struct domain * dm, struct
   // todo: j indexes columns of matrix so [j-stepx, j, j+stepx] changes columns 
   
   assert(dk && dm);  
-  stepx = ceil(radius/dm->stepx);
-  stepy = ceil(radius/dm->stepy);
+  stepx = floor(radius/dm->stepx);
+  stepy = floor(radius/dm->stepy);
 
+  printf("radius=%.4f stepx=%.4f stepy=%.4f rstepx=%d rstepy=%d fstepx=%d fstepy=%d\n",
+	 radius,radius/dm->stepx,radius/dm->stepy, stepx, stepy, (int)(radius/dm->stepx),(int)(radius/dm->stepy) );
+  
   int i = center/gsize;
   int j = center%gsize;
 
@@ -470,8 +466,7 @@ void excludeDisk(int gsize, struct disk * dk, uint32_t * activity, int value) {
   for (int i = dk->si ; i < dk->ei + 1; i++){
     for (int j = dk->sj ; j < dk->ej + 1; j++){
       *(activity+( i*gsize + j) ) = value; // 1
-      //     printf("point %d(%d,%d) in disk! Its activity set to %d\n",i*gsize + j, i, j,
-      //	     *(activity+( i*gsize + j) ));
+           printf("point %d(%d,%d) in disk!\n",i*gsize + j, i, j);
     }
   }
 }
@@ -522,14 +517,19 @@ void locateExcludeDisk(double radius, int center, int gsize, struct domain * dm,
 }
 
 
-void initDomain(struct domain *dm, int gsize, int xmin, int xmax, int ymin, int ymax) {
-  
+void initDomain(struct domain *dm, int gsize, double xmin, double xmax, double ymin, double ymax) {
+
+  assert(dm);
   dm->x_min = xmin;
   dm->x_max = xmax;
   dm->y_min = ymin;
   dm->y_max = ymax;
-  dm->stepx = (dm->x_max - dm->x_min)/gsize;
-  dm->stepy=(dm->y_max - dm->y_min)/gsize;
+  
+  assert(dm->x_min < dm->x_max);
+  assert(dm->y_min < dm->y_max);
+ 
+  dm->stepx = (dm->x_max - dm->x_min)/(gsize-1);
+  dm->stepy = (dm->y_max - dm->y_min)/(gsize-1);
 
 }
 
@@ -562,7 +562,10 @@ void printDiagnostics(lapack_int m, lapack_int n,
   for (int i = 0; i < gsize * gsize ; i++) {
     if(!(i % gsize))
       printf("\n");
-    printf("%.4f ",diag->ssv[i]);
+    //    if(diag->ssv[i] <=0.1)
+      printf("%.4f ",diag->ssv[i]);
+      //    else
+      //      printf("0.0000");
   }  
   printf("\n");  
   

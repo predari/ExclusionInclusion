@@ -28,14 +28,23 @@ long long timeval_diff(struct timeval *difference, struct timeval *end_time, str
 
 
 void create_grcar( lapack_complex_double *a, lapack_int m, lapack_int lda ) {
-  int i;
-  for (i = 0; i < lda* m ; i++ ) {
-    if( i % (lda+1) == 0 || i % (lda+1) == 1 || i % (lda+1) == 2 || i % (lda+1) == 3 ) 
-      *(a+i) = 1 ;
-    else if( i % (lda+1) == lda )
-      *(a+i) = -1 ;
-    else *(a+i) = 0;
- }
+  int i,j;
+ /*  for (i = 0; i < lda* m ; i++ ) { */
+ /*    if( i % (lda+1) == 0 || i % (lda+1) == 1 || i % (lda+1) == 2 || i % (lda+1) == 3 )  */
+ /*      *(a+i) = 1 ; */
+ /*    else if( i % (lda+1) == lda ) */
+ /*      *(a+i) = -1 ; */
+ /*    else *(a+i) = 0; */
+ /* } */
+   for (i = 0; i < m ; i++ ) {
+       *(a+(i+1)*lda+i) = -1 ;
+     for (j = 0; j < lda ; j++ ) {
+       if( j == i || j == i + 1  || j == i + 2 || j == i + 3 )
+	 *(a+i*lda+j) = 1 ;
+       else if (*(a+i*lda+j)!= -1)
+	 *(a+i*lda+j) = 0;
+     }
+   }
 }
 
 
