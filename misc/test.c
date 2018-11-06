@@ -97,7 +97,8 @@ int main()  {
   assert(activity);
   assert(diag);
   printDiagnostics(m, n, &dm, gsize, diag, activity);
-		     
+  printf("saving ssv in file\n");
+  save_array("ssv.txt",gsize,gsize,diag->ssv);		     
   
   free(a);
   free (activity);
@@ -182,6 +183,7 @@ struct diagnostics * pseudospectra(lapack_int m, lapack_int n, lapack_int gsize,
     diag->svdPoints = svdPoints;
   // if grid has been used
   else diag->svdPoints = gsize * gsize;
+
   /* printf("activity (inside):"); */
   /* for (int i = 0; i < gsize * gsize ; i++) { */
   /*   if(!(i % gsize)) */
@@ -230,8 +232,6 @@ double grid(lapack_int m, lapack_int n,
     exit( 1 );
   }
   *(activity+iy) = 1;
-  printf("%.4f\n", s[m-1]);
-
 
   free(superb);
   return s[m-1];
@@ -268,6 +268,7 @@ struct mog_status * mog(lapack_int m, lapack_int n,
   if(  *(activity+z) == 1) {
     printf("Point:%d is skipped!\n",z);
     mg->skip = 1;
+    mg->ssv = 0.1;
     return mg;
   }
   
@@ -354,9 +355,15 @@ struct mog_status * mmog(lapack_int m, lapack_int n,
   mg->ssv = 0.0;
   
 
-  if(*(activity+z) == 1) {
+  if(*(activity+z) == 1 || *(activity+z) == 2 || *(activity+z) == 3) {
     printf("Point:%d is skipped!\n",z);
     mg->skip = 1;
+    if(*(activity+z) == 1)
+      mg->ssv = 0.1;
+    else if(*(activity+z) == 2)
+      mg->ssv = 0.01;
+    else if(*(activity+z) == 3)
+      mg->ssv = 0.001;
     return mg;
   }
   info = LAPACKE_zgesvd( LAPACK_ROW_MAJOR, 'N', 'N',
