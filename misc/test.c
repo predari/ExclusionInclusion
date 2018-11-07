@@ -157,8 +157,8 @@ struct diagnostics * pseudospectra(lapack_int m, lapack_int n, lapack_int gsize,
     for (int i = 0; i < lda*m ; i=i+(n+1))
       acp[i]=acp[i]-(dm->x_min+(iy/gsize * dm->stepx)+(dm->y_min + (iy % gsize * dm->stepy))*I);
        
-    ssv = grid(m,n,acp,gsize,activity,iy);
-    //mg = mog(m,n,nbepsilon,e,dm,acp,gsize,activity,iy);
+    //ssv = grid(m,n,acp,gsize,activity,iy);
+    mg = mog(m,n,nbepsilon,e,dm,acp,gsize,activity,iy);
     //mg = mmog(m,n,nbepsilon,e,dm,acp,gsize,activity,iy);
     
     if(mg != NULL) {
