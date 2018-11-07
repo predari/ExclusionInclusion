@@ -1,7 +1,8 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <lapacke.h>
+#include <assert.h>
+
 #include "aux.h"
 
 
@@ -92,7 +93,7 @@ void read_array(const char * fname, int m, int n, double *ssv ) {
   fp = fopen (fname, "w+");
   int line=0;
   for (int i = 0; i < m * n ; i++) {
-    fscanf(fp, "%d", &ssv[i]);
+    fscanf(fp, "%.4f", &ssv[i]);
   }  
   fclose(fp);
 }

@@ -12,12 +12,16 @@ LAPACK_DIR:= /usr/local/opt/lapack/lib
 # INCDIR:= ./include
 # LIBDIR:= ./lib
 
-program_NAME := myprogram
-program_C_SRCS := $(wildcard *.c)
+program1_NAME := ts
+program2_NAME := psc
+#program_C_SRCS := $(wildcard *.c)
+program_C_SRCS := aux.c
 program_CXX_SRCS := $(wildcard *.cpp)
-program_C_OBJS := ${program_C_SRCS:.c=.o}
+program_C_OBJS := ${program_C_SRCS:.c=.o}	
 program_CXX_OBJS := ${program_CXX_SRCS:.cpp=.o}
 program_OBJS := $(program_C_OBJS) $(program_CXX_OBJS)
+program1_OBJS := test.o $(program_CXX_OBJS)
+program2_OBJS := pseudoCompare.o $(program_CXX_OBJS)
 #program_INCLUDE_DIRS := /usr/local/Cellar/lapack/3.8.0/include
 program_INCLUDE_DIRS := /usr/local/opt/lapack/include
 program_LIBRARY_DIRS := 
@@ -29,21 +33,32 @@ LDFLAGS += $(foreach librarydir,$(program_LIBRARY_DIRS),-L$(librarydir))
 LDFLAGS += $(foreach library,$(program_LIBRARIES),-l$(library))
 
 # for my mac 
-#CXX := gcc-8
+CXX := gcc-8
 # for my linux
-CXX := gcc
+# CXX := gcc
 CXXFLAGS := -Wall -std=c99
 LINK.cc := $(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) 
 
 .PHONY: all clean distclean
 
-all: $(program_NAME)
+all: $(program1_NAME) $(program2_NAME)
 
 %.o: %.c aux.h
 	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) -o $@ $<
 
-$(program_NAME): $(program_OBJS)
-	$(CXX) $(CXXFLAGS) $(program_OBJS) -o $(program_NAME) $(LDFLAGS)
+$(program1_NAME): $(program_OBJS)
+	$(CXX) $(CXXFLAGS) $(program1_OBJS) $(program_C_OBJS) -o $(program1_NAME) $(LDFLAGS)
+
+$(program2_NAME): $(program_OBJS)
+	$(CXX) $(CXXFLAGS) $(program2_OBJS) $(program_C_OBJS) -o $(program2_NAME)
+#$(LDFLAGS)
+
+#all: program1 program2
+#program1: program1.c
+#    gcc -o program1 program1.c
+#program2: program2.c
+#    gcc -o program2 program2.c
+
 
 clean:
 	@- $(RM) $(program_NAME)
@@ -52,6 +67,5 @@ clean:
 distclean: clean
 
 
-# install_name_tool -change /usr/local/opt/gcc/lib/gcc/8/libgfortran.5.dylib /usr/local/Cellar/lapack/3.8.0/lib/libgfortran.5.dylib myprogram 
 
 

@@ -15,7 +15,7 @@
 #define min(a,b) ((a)>(b)?(b):(a))
 
 
-int main(int argc, int * argv[])  {
+int main(int argc, char * argv[])  {
 
   if(argc != 4) {
       perror("Wrong number of arguments");
@@ -25,7 +25,7 @@ int main(int argc, int * argv[])  {
   const char * f1 = argv[1];
   const char * f2 = argv[2];
   int gsize = atoi(argv[3]);
-  assrt(gsize>0);
+  assert(gsize>0);
   assert(f1 && f2);
   double ssv1[gsize*gsize];
   double ssv2[gsize*gsize];
@@ -36,6 +36,6 @@ int main(int argc, int * argv[])  {
     
     //if(ssv1[i] == ssv2[i] || ssv1[i])
   }
-    return 0;
+  return 0;
   
 }

@@ -21,7 +21,8 @@
 
 // following is the input values of the domain.
 // in a first attempt, we copied them from GK paper.
-// later on we should use one of the following methods: Gresh. Disk, FoV, matrix norms, QR
+// later on we should use one of the following methods:
+// Gresh. Disk, FoV, matrix norms, QR
 // see notes on which one is more appropriate for us.
 
 // fov -0.6368    2.9736   -3.1160    3.1160
@@ -77,8 +78,6 @@ int main()  {
   lapack_int m = M, n = N, lda = LDA, ldu = LDU, ldvt = LDVT;
   int svdPoints = 0;
   int gsize = GRID;
-
-  //struct timeval interval;
 
   struct diagnostics * diag = NULL;
   uint32_t * activity =  malloc((gsize*gsize)*sizeof( uint32_t));
