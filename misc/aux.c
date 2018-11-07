@@ -72,6 +72,31 @@ void print_matrix( char* desc, lapack_int m, lapack_int n, lapack_complex_double
         }
 }
 
+void save_array(const char * fname, int m, int n, double *ssv ) {
+  FILE * fp;
+
+  fp = fopen (fname, "w+");
+   for (int i = 0; i < m * n ; i++) {
+    /* if(!(i % n)) */
+    /*   fprintf(fp,"\n"); */
+    fprintf(fp,"%.4f ",ssv[i]);
+   }  
+   /* fprintf(fp,"\n");   */
+   fclose(fp);
+}
+
+void read_array(const char * fname, int m, int n, double *ssv ) {
+  FILE * fp;
+
+  assert(ssv);
+  fp = fopen (fname, "w+");
+  int line=0;
+  for (int i = 0; i < m * n ; i++) {
+    fscanf(fp, "%d", &ssv[i]);
+  }  
+  fclose(fp);
+}
+
 /* Auxiliary routine: printing a vector of integers */
 void print_int_vector( char* desc, lapack_int n, lapack_int* a ) {
         lapack_int j;
