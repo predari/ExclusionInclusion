@@ -20,8 +20,8 @@ program_CXX_SRCS := $(wildcard *.cpp)
 program_C_OBJS := ${program_C_SRCS:.c=.o}	
 program_CXX_OBJS := ${program_CXX_SRCS:.cpp=.o}
 program_OBJS := $(program_C_OBJS) $(program_CXX_OBJS)
-program1_OBJS := test.c $(program_CXX_OBJS)
-program2_OBJS := pseudoCompare.c $(program_CXX_OBJS)
+program1 := test.c
+program2 := pseudoCompare.c
 #program_INCLUDE_DIRS := /usr/local/Cellar/lapack/3.8.0/include
 program_INCLUDE_DIRS := /usr/local/opt/lapack/include
 program_LIBRARY_DIRS := 
@@ -47,10 +47,10 @@ all: $(program1_NAME) $(program2_NAME)
 	$(CXX) -c $(CXXFLAGS) $(CPPFLAGS) -o $@ $<
 
 $(program1_NAME): $(program_OBJS)
-	$(CXX) $(CXXFLAGS) $(program1_OBJS) $(program_C_OBJS) -o $(program1_NAME) $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $(program1) $(program_C_OBJS) -o $(program1_NAME) $(LDFLAGS)
 
 $(program2_NAME): $(program_OBJS)
-	$(CXX) $(CXXFLAGS) $(program2_OBJS) $(program_C_OBJS) -o $(program2_NAME)
+	$(CXX) $(CXXFLAGS) $(program2) $(program_C_OBJS) -o $(program2_NAME)
 #$(LDFLAGS)
 
 # all: program1 program2
@@ -61,7 +61,8 @@ $(program2_NAME): $(program_OBJS)
 
 
 clean:
-	@- $(RM) $(program_NAME)
+	@- $(RM) $(program1_NAME)
+	@- $(RM) $(program2_NAME)
 	@- $(RM) $(program_OBJS)
 
 distclean: clean
