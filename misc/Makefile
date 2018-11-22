@@ -50,8 +50,7 @@ $(program1_NAME): $(program_OBJS)
 	$(CXX) $(CXXFLAGS) $(program1) $(program_C_OBJS) -o $(program1_NAME) $(LDFLAGS)
 
 $(program2_NAME): $(program_OBJS)
-	$(CXX) $(CXXFLAGS) $(program2) $(program_C_OBJS) -o $(program2_NAME)
-#$(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $(program2) $(program_C_OBJS) -o $(program2_NAME) $(LDFLAGS)
 
 # all: program1 program2
 # program1: program1.c
