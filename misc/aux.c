@@ -90,11 +90,16 @@ void read_array(const char * fname, int m, int n, double *ssv ) {
   FILE * fp;
 
   assert(ssv);
-  fp = fopen (fname, "w+");
+  fp = fopen (fname, "r+");
   int line=0;
+  // TODO: problem with the way I read the file
   for (int i = 0; i < m * n ; i++) {
-    fscanf(fp, "%.4f", &ssv[i]);
-  }  
+    fscanf(fp, "%f", &ssv[i]);
+  }
+  for (int i = 0; i <  m * n  ; i++) {
+    printf(" %f \n",i, ssv[i]);
+  }
+  
   fclose(fp);
 }
 

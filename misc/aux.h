@@ -59,6 +59,12 @@ void save_array(const char * fname,
 		double *ssv
 		);
 
+
+void read_array(const char * fname,
+		int m, int n,
+		double *ssv
+		);
+
 // todo: grid doesn't use all arguments for far
 double grid(lapack_int m, lapack_int n,
 	    lapack_complex_double *a,

@@ -38,6 +38,10 @@ int main(int argc, char * argv[])  {
   for(int i = 0; i < nbepsilon; i++) {
     e[i] = pow(0.1,(i+1));
   }
+
+  for (int i = 0; i < gsize*gsize ; i++) {
+    printf("point in position %d is the same in those files  (%f %f) \n",i, ssv1[i],ssv2[i]);
+  }
   
   for (int i = 0; i < gsize*gsize ; i++) {
     same = 0;
@@ -45,13 +49,13 @@ int main(int argc, char * argv[])  {
       continue;
     else {
       for(int j = 0; j < nbepsilon; j++) {
-	if(ssv1[i] <= e[j] && ssv2[i] <= e[j]) {
+	if((ssv1[i] <= e[j] && ssv2[i] <= e[j]) || (ssv1[i] > e[j] && ssv2[i] > e[j])) {
 	  same = 1;
 	  break;
 	}
       }
       if (same == 0) {
-	printf("point in position %d is not the same in those files \n",i);
+	printf("point in position %d is not the same in those files (%f %f) \n",i, ssv1[i],ssv2[i]);
 	
       }
     }
