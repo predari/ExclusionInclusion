@@ -38,10 +38,6 @@ int main(int argc, char * argv[])  {
   for(int i = 0; i < nbepsilon; i++) {
     e[i] = pow(0.1,(i+1));
   }
-
-  for (int i = 0; i < gsize*gsize ; i++) {
-    printf("point in position %d is the same in those files  (%f %f) \n",i, ssv1[i],ssv2[i]);
-  }
   
   for (int i = 0; i < gsize*gsize ; i++) {
     same = 0;
@@ -54,10 +50,8 @@ int main(int argc, char * argv[])  {
 	  break;
 	}
       }
-      if (same == 0) {
-	printf("point in position %d is not the same in those files (%f %f) \n",i, ssv1[i],ssv2[i]);
-	
-      }
+      if (same == 0)
+	printf("input files do not have the same value for gridpoint %d (%f %f) \n",i, ssv1[i],ssv2[i]);
     }
   }
   return 0;

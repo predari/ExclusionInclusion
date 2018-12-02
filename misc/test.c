@@ -11,7 +11,7 @@
 
 #define M 20 // first diminsion of matrix
 #define N 20 // second diminsion of matrix
-#define GRID 4 // grid size
+#define GRID 20 // grid size
 #define LDA N
 #define LDU M
 #define LDVT N

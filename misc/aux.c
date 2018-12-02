@@ -78,28 +78,24 @@ void save_array(const char * fname, int m, int n, double *ssv ) {
 
   fp = fopen (fname, "w+");
    for (int i = 0; i < m * n ; i++) {
-    /* if(!(i % n)) */
-    /*   fprintf(fp,"\n"); */
+    if(!(i % n) && i != 0)
+      fprintf(fp,"\n");
     fprintf(fp,"%.4f ",ssv[i]);
    }  
    /* fprintf(fp,"\n");   */
    fclose(fp);
 }
 
+
 void read_array(const char * fname, int m, int n, double *ssv ) {
   FILE * fp;
-
+  char buf[n];
   assert(ssv);
-  fp = fopen (fname, "r+");
-  int line=0;
-  // TODO: problem with the way I read the file
-  for (int i = 0; i < m * n ; i++) {
-    fscanf(fp, "%f", &ssv[i]);
-  }
-  for (int i = 0; i <  m * n  ; i++) {
-    printf(" %f \n",i, ssv[i]);
-  }
-  
+  fp = fopen (fname, "r");
+  assert(fp);
+  int i = 0;
+  while((fscanf(fp,"%lf",&ssv[i]))!=EOF)
+    i++;
   fclose(fp);
 }
 
