@@ -11,7 +11,7 @@
 
 #define M 20 // first diminsion of matrix
 #define N 20 // second diminsion of matrix
-#define GRID 20 // grid size
+#define GRID 10 // grid size
 #define LDA N
 #define LDU M
 #define LDVT N
@@ -437,9 +437,13 @@ void locateDisk(double radius, int center, int gsize, struct domain * dm, struct
   stepx = floor(radius/dm->stepx);
   stepy = floor(radius/dm->stepy);
 
-  printf("radius=%.4f stepx=%.4f stepy=%.4f rstepx=%d rstepy=%d fstepx=%d fstepy=%d\n",
-	 radius,radius/dm->stepx,radius/dm->stepy, stepx, stepy, (int)(radius/dm->stepx),(int)(radius/dm->stepy) );
-  
+  printf("radius=%.4f dm->stepx=%.4f dm->stepy=%.4f\n",
+	 radius,dm->stepx,dm->stepy );
+
+  printf("stepx=%d stepy=%.d cstepx=%.4f cstepy=%.4f\n",
+	 stepx, stepy,
+	 (radius/dm->stepx),(radius/dm->stepy) );
+    
   int i = center/gsize;
   int j = center%gsize;
 
@@ -471,6 +475,14 @@ void excludeDisk(int gsize, struct disk * dk, uint32_t * activity, int value) {
   assert(dk && activity);
   for (int i = dk->si ; i < dk->ei + 1; i++){
     for (int j = dk->sj ; j < dk->ej + 1; j++){
+
+      /* TODO: this is because we try to exclude discretized squares and not disks
+       * so I have to make sure that the current point still belongs to the disk.
+       * y = sqrt(x^2 + y^2)*/
+      /* if(sqrt(pow(i*dm->stepx,2) + pow(j*dm->stepy,2)) <= radius) { */
+      /* 	*(activity+( i*gsize + j) ) = value; // 1 exclude point */
+      /* } */
+      
       *(activity+( i*gsize + j) ) = value; // 1
            printf("point %d(%d,%d) in disk!\n",i*gsize + j, i, j);
     }
