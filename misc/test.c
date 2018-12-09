@@ -284,9 +284,9 @@ struct mog_status * mog(lapack_int m, lapack_int n,
   
   if(s[m-1] > e[0]) {// first curve
     printf("Excluding disk (%d,%.4f)\n",z, s[m-1]-e[0]);
-    locateDisk(s[m-1]-e[0], z, gsize, dm, dk);
-    excludeDisk(gsize, dk, activity,1);
-    //locateExcludeDisk(s[m-1]-e[0], z, gsize, dm, activity);
+    //locateDisk(s[m-1]-e[0], z, gsize, dm, dk);
+    //excludeDisk(gsize, dk, activity,1);
+    locateExcludeDisk(s[m-1]-e[0], z, gsize, dm, activity);
     printf("activity (inside):");
     for (int i = 0; i < gsize * gsize ; i++) {
       if(!(i % gsize))
@@ -503,33 +503,35 @@ void locateExcludeDisk(double radius, int center, int gsize, struct domain * dm,
   // todo: j indexes columns of matrix so [j-stepx, j, j+stepx] changes columns 
   
 
-  stepx = ceil(radius/dm->stepx);
-  stepy = ceil(radius/dm->stepy);
+  stepx = floor(radius/dm->stepx);
+  stepy = floor(radius/dm->stepy);
   printf("Disk c:%d radius=%f and dm->stepx=%f ( %f , %f )\n", center,radius, dm->stepx, stepx, stepy);
-  int i = center/gsize;
-  int j = center%gsize;
+  int ci = center/gsize;
+  int cj = center%gsize;
 
-    start_i = i - stepy;
+    start_i = ci - stepy;
     if( start_i < 0 )
       start_i = 0;
-    start_j = j - stepx;
+    start_j = cj - stepx;
     if( start_j < 0 )
       start_j = 0;
-    end_i = i + stepy;
+    end_i = ci + stepy;
     if( end_i > gsize - 1 )
       end_i = gsize - 1;
-    end_j = j + stepx;
+    end_j = cj + stepx;
     if( end_j > gsize - 1)
       end_j = gsize - 1;
 
     printf("Disk start=(%d,%d), end=(%d,%d)\n",start_i,start_j, end_i,end_j);
     for (int i = start_i ; i < end_i + 1; i++){
       for (int j = start_j ; j < end_j + 1; j++){
-	//if (j < end_j) {
-	  printf("point %d(%d,%d) in disk!\n",i*gsize + j, i, j);
-	  *(activity+( i*gsize + j) ) = 1;
-	  //}
-	  //else continue;
+	//	if( (i%grid!= ci%grid) || (j/grid != cj/grid) ) {
+	//if(sqrt(pow(i*dm->stepx,2) + pow(j*dm->stepy,2)) <= radius) {
+	    printf("point %d(%d,%d) in disk!\n",i*gsize + j, i, j);
+	    *(activity+( i*gsize + j) ) = 1; // value
+	    // }
+	    // }
+	//else continue;
       }
     }
 }
