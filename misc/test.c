@@ -11,7 +11,7 @@
 
 #define M 20 // first diminsion of matrix
 #define N 20 // second diminsion of matrix
-#define GRID 10 // grid size
+#define GRID 100 // grid size
 #define LDA N
 #define LDU M
 #define LDVT N
@@ -39,6 +39,7 @@ struct diagnostics {
   struct timeval later;
   int svdPoints;
   double *ssv;
+  double *pss;
 
 };
 
@@ -135,6 +136,7 @@ struct diagnostics * pseudospectra(lapack_int m, lapack_int n, lapack_int gsize,
   /* Diagnostic variables */
   struct diagnostics * diag = malloc(sizeof(struct diagnostics));
   diag->ssv = malloc((gsize*gsize)*sizeof(double));
+  diag->pss = malloc((gsize*gsize)*sizeof(double));
 
   printf("e curves: ");
   for(int i = 0; i < nbepsilon; i++) {
@@ -156,20 +158,28 @@ struct diagnostics * pseudospectra(lapack_int m, lapack_int n, lapack_int gsize,
     //print_matrix("grcar acp",m,n,acp,lda);
     for (int i = 0; i < lda*m ; i=i+(n+1))
       acp[i]=acp[i]-(dm->x_min+(iy/gsize * dm->stepx)+(dm->y_min + (iy % gsize * dm->stepy))*I);
-       
+
+    printf("gridpoint (%f %f) = ",dm->x_min+(iy/gsize * dm->stepx),(dm->y_min + (iy % gsize * dm->stepy)));
     //ssv = grid(m,n,acp,gsize,activity,iy);
+    //printf("%f\n",ssv);
     mg = mog(m,n,nbepsilon,e,dm,acp,gsize,activity,iy);
+    //printf("%f\n",mg->ssv);
     //mg = mmog(m,n,nbepsilon,e,dm,acp,gsize,activity,iy);
     
     if(mg != NULL) {
-      if(!(mg->skip))
-	svdPoints++;
       assert(diag->ssv);
       diag->ssv[iy] = mg->ssv;
+      if(!(mg->skip))
+	svdPoints++;
+      if (diag->ssv[iy] <= e[0])
+	diag->pss[iy] = diag->ssv[iy];
+      else
+	diag->pss[iy] = 1;
     }
     else {
       assert(diag->ssv);
       diag->ssv[iy] = ssv;
+      diag->pss[iy] = ssv; // not necessary for grid
     }
   }
 
@@ -506,32 +516,32 @@ void locateExcludeDisk(double radius, int center, int gsize, struct domain * dm,
   stepx = floor(radius/dm->stepx);
   stepy = floor(radius/dm->stepy);
   printf("Disk c:%d radius=%f and dm->stepx=%f ( %f , %f )\n", center,radius, dm->stepx, stepx, stepy);
-  int ci = center/gsize;
-  int cj = center%gsize;
-
-    start_i = ci - stepy;
+  int zi = center/gsize;
+  int zj = center%gsize;
+  double realradius = 0.0;
+    start_i = zi - stepy;
     if( start_i < 0 )
       start_i = 0;
-    start_j = cj - stepx;
+    start_j = zj - stepx;
     if( start_j < 0 )
       start_j = 0;
-    end_i = ci + stepy;
+    end_i = zi + stepy;
     if( end_i > gsize - 1 )
       end_i = gsize - 1;
-    end_j = cj + stepx;
+    end_j = zj + stepx;
     if( end_j > gsize - 1)
       end_j = gsize - 1;
-
+    
     printf("Disk start=(%d,%d), end=(%d,%d)\n",start_i,start_j, end_i,end_j);
     for (int i = start_i ; i < end_i + 1; i++){
       for (int j = start_j ; j < end_j + 1; j++){
-	//	if( (i%grid!= ci%grid) || (j/grid != cj/grid) ) {
-	//if(sqrt(pow(i*dm->stepx,2) + pow(j*dm->stepy,2)) <= radius) {
+	// TODO: does not work correctly yet
+	realradius= sqrt(pow(abs(zi-i)*dm->stepy,2) + pow(abs(zj-j)*dm->stepx,2));
+	printf("point (%d,%d) realradius=%f\n",i,j,realradius);
+	if(realradius <= radius) {
 	    printf("point %d(%d,%d) in disk!\n",i*gsize + j, i, j);
 	    *(activity+( i*gsize + j) ) = 1; // value
-	    // }
-	    // }
-	//else continue;
+	}
       }
     }
 }
@@ -564,6 +574,7 @@ void printDiagnostics(lapack_int m, lapack_int n,
 
     /* Time variables */
   struct timeval interval;
+  int pps_count = 0;
   
   printf("Input Diagnostics:\n");
   printf("- Matrix: grcar(%d,%d)\n",m,n);
@@ -588,6 +599,17 @@ void printDiagnostics(lapack_int m, lapack_int n,
       //      printf("0.0000");
   }  
   printf("\n");  
+
+  assert(diag->pss);
+  printf("- Pss table:\n");
+  for (int i = 0; i < gsize ; i++) {
+    for (int j = 0; j <= gsize*(gsize-1) ; j=j+gsize) {
+      printf("%.4f ",diag->pss[j+i]);
+      if (diag->pss[j+i] <= 0.1)
+	pps_count++;
+    }
+    printf("\n");
+  }
   
   printf("- Activity table: ");
   for (int i = 0; i < gsize * gsize ; i++) {
@@ -598,6 +620,6 @@ void printDiagnostics(lapack_int m, lapack_int n,
   printf("\n");
 
   printf(" - Number of visited gridPoints: %d\n",diag->svdPoints);
+  printf(" - Number of points in the pseudospectra: %d\n",pps_count);
   printf(" - Gain percentage: %.2f\n", (double)( (gsize*gsize) - diag->svdPoints )/ (gsize*gsize) );
-
 }
