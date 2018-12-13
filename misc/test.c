@@ -67,18 +67,35 @@ struct disk {
 
 
 
-int main()  {
+int main(int argc, char * argv[])  {
+
+  if(argc != 6) {
+      perror("Wrong number of arguments. Usage: main method m n gsize nbepsilon");
+      exit(1);
+  }
+
+  const char * meth = argv[1];
+  int m_in =  atoi(argv[2]);
+  int n_in =  atoi(argv[3]);
+  int gsize = atoi(argv[4]);
+  int nbepsilon = atoi(argv[5]);
+  assert(gsize>0 && m_in>0 && n_in>0 && nbepsilon > 0);
+  assert(meth);
+
   // TODO: 
   /* USER INPUT PARAMETERS */
   /*   - NBEPSILON */
   /*   - m, n */
-  /*   - GRID */
+  /*   - GRID size */
+  /*   - method choice */
+  /* LATER */
   /*   - a */
   /*   - XMIN, XMAX, YMIN, YMAX */  // check that min<max
   lapack_complex_double *a = NULL;
-  lapack_int m = M, n = N, lda = LDA, ldu = LDU, ldvt = LDVT;
+  lapack_int m = m_in, n = n_in;
+  lapack_int lda = LDA, ldu = LDU, ldvt = LDVT;
   int svdPoints = 0;
-  int gsize = GRID;
+  //int gsize = GRID;
 
   struct diagnostics * diag = NULL;
   uint32_t * activity =  malloc((gsize*gsize)*sizeof( uint32_t));
@@ -93,7 +110,7 @@ int main()  {
   initDomain(&dm, gsize, XMIN, XMAX, YMIN, YMAX);
 
   
-  diag = pseudospectra(m, n, gsize, NEPSILON, &dm, a, activity);
+  diag = pseudospectra(m, n, gsize, nbepsilon, meth, &dm, a, activity);
   assert(activity);
   assert(diag);
   printDiagnostics(m, n, &dm, gsize, diag, activity);
@@ -112,7 +129,7 @@ int main()  {
 
 
 struct diagnostics * pseudospectra(lapack_int m, lapack_int n, lapack_int gsize,
-				   lapack_int nbepsilon, struct domain * dm,
+				   lapack_int nbepsilon, const char * meth, struct domain * dm,
 				   lapack_complex_double *a, uint32_t * activity ) {
 
   lapack_int lda = n;
@@ -132,6 +149,7 @@ struct diagnostics * pseudospectra(lapack_int m, lapack_int n, lapack_int gsize,
   assert(a);
   assert(activity);
   assert(dm);
+  assert(meth);
 
   /* Diagnostic variables */
   struct diagnostics * diag = malloc(sizeof(struct diagnostics));
@@ -159,13 +177,22 @@ struct diagnostics * pseudospectra(lapack_int m, lapack_int n, lapack_int gsize,
     for (int i = 0; i < lda*m ; i=i+(n+1))
       acp[i]=acp[i]-(dm->x_min+(iy/gsize * dm->stepx)+(dm->y_min + (iy % gsize * dm->stepy))*I);
 
-    printf("gridpoint (%f %f) = ",dm->x_min+(iy/gsize * dm->stepx),(dm->y_min + (iy % gsize * dm->stepy)));
-    //ssv = grid(m,n,acp,gsize,activity,iy);
+    /* printf("gridpoint (%f %f) = ",dm->x_min+(iy/gsize * dm->stepx),(dm->y_min + (iy % gsize * dm->stepy))); */
+
+    if(!strcmp(meth,"grid")) {
+      ssv = grid(m,n,acp,gsize,activity,iy);
     //printf("%f\n",ssv);
+    } else if(!strcmp(meth,"mog")) {
     mg = mog(m,n,nbepsilon,e,dm,acp,gsize,activity,iy);
     //printf("%f\n",mg->ssv);
+    } else if(!strcmp(meth,"mmog")) {
     //mg = mmog(m,n,nbepsilon,e,dm,acp,gsize,activity,iy);
-    
+      printf("Sorry, mmog is not implemented yet!\n");
+    }
+    else {
+      printf("Wrong method argument! Choose one of grid, mog or mmog.\n");
+      exit(1);
+    }
     if(mg != NULL) {
       assert(diag->ssv);
       diag->ssv[iy] = mg->ssv;
