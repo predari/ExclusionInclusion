@@ -118,6 +118,8 @@ void initDomain(struct domain *dm,
 		double xmin, double xmax,
 		double ymin, double ymax);
 
+void printDomain(struct domain *dm, int gsize);
+  
 void printDiagnostics(lapack_int m, lapack_int n,
 		      struct domain *dm,
 		      int gsize,

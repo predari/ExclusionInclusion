@@ -108,7 +108,7 @@ int main(int argc, char * argv[])  {
 
   struct domain dm;
   initDomain(&dm, gsize, XMIN, XMAX, YMIN, YMAX);
-
+  printDomain(&dm, gsize);
   
   diag = pseudospectra(m, n, gsize, nbepsilon, meth, &dm, a, activity);
   assert(activity);
@@ -198,10 +198,10 @@ struct diagnostics * pseudospectra(lapack_int m, lapack_int n, lapack_int gsize,
       diag->ssv[iy] = mg->ssv;
       if(!(mg->skip))
 	svdPoints++;
-      if (diag->ssv[iy] <= e[0])
+      //      if (diag->ssv[iy] <= e[0])
 	diag->pss[iy] = diag->ssv[iy];
-      else
-	diag->pss[iy] = 1;
+	//      else
+	//	diag->pss[iy] = 1;
     }
     else {
       assert(diag->ssv);
@@ -269,6 +269,7 @@ double grid(lapack_int m, lapack_int n,
   }
   *(activity+iy) = 1;
 
+  printf("Gridpoint with possible disk (%d,%d) %.4f\n",(iy / gsize) + 1, (iy % gsize) + 1, s[m-1]-0.1);
   free(superb);
   return s[m-1];
 
@@ -290,7 +291,8 @@ struct mog_status * mog(lapack_int m, lapack_int n,
 
   double *s;
   double *superb;
-  s = malloc(m*sizeof(double)); // holds the singular values
+  //s = malloc(m*sizeof(double)); // holds the singular values
+  s = calloc(m,sizeof(double)); // holds the singular values
   superb = malloc(min(m,n)*sizeof(double));
   assert(a);
   assert(activity);
@@ -302,7 +304,7 @@ struct mog_status * mog(lapack_int m, lapack_int n,
   
 
   if(  *(activity+z) == 1) {
-    printf("Point:%d is skipped!\n",z);
+    //printf("Point:%d is skipped!\n",z);
     mg->skip = 1;
     mg->ssv = 0.11; // TODO: magic number. explain
     return mg;
@@ -317,13 +319,14 @@ struct mog_status * mog(lapack_int m, lapack_int n,
   }
   *(activity+z) = 1;
   mg->ssv = s[m-1];
-  printf("Point %d is svded with value %.4f!\n",z, s[m-1]);
+  //printf("Point %d is svded with value %.4f!\n",z, s[m-1]);
   
   if(s[m-1] > e[0]) {// first curve
-    printf("Excluding disk (%d,%.4f)\n",z, s[m-1]-e[0]);
+    printf("Excluding disk (%d,%d) %.4f %.4f %.4f\n",(z / gsize) + 1, (z % gsize) + 1, dm->x_min + (z / gsize)*dm->stepx,  dm->y_min + (z % gsize) * dm->stepy,s[m-1]-e[0]);
     //locateDisk(s[m-1]-e[0], z, gsize, dm, dk);
     //excludeDisk(gsize, dk, activity,1);
     locateExcludeDisk(s[m-1]-e[0], z, gsize, dm, activity);
+    
     printf("activity (inside):");
     for (int i = 0; i < gsize * gsize ; i++) {
       if(!(i % gsize))
@@ -481,8 +484,8 @@ void locateDisk(double radius, int center, int gsize, struct domain * dm, struct
 	 stepx, stepy,
 	 (radius/dm->stepx),(radius/dm->stepy) );
     
-  int i = center/gsize;
-  int j = center%gsize;
+  int i = center / gsize;
+  int j = center % gsize;
 
     start_i = i - stepy;
     if( start_i < 0 )
@@ -542,10 +545,10 @@ void locateExcludeDisk(double radius, int center, int gsize, struct domain * dm,
 
   stepx = floor(radius/dm->stepx);
   stepy = floor(radius/dm->stepy);
-  printf("Disk c:%d radius=%f and dm->stepx=%f ( %f , %f )\n", center,radius, dm->stepx, stepx, stepy);
-  int zi = center/gsize;
-  int zj = center%gsize;
-  double realradius = 0.0;
+  //printf("Disk c:%d radius=%f and dm->stepx=%f ( %f , %f )\n", center,radius, dm->stepx, stepx, stepy);
+  int zi = center / gsize;
+  int zj = center % gsize;
+  double r = 0.0;
     start_i = zi - stepy;
     if( start_i < 0 )
       start_i = 0;
@@ -558,15 +561,19 @@ void locateExcludeDisk(double radius, int center, int gsize, struct domain * dm,
     end_j = zj + stepx;
     if( end_j > gsize - 1)
       end_j = gsize - 1;
+
+
+   
     
-    printf("Disk start=(%d,%d), end=(%d,%d)\n",start_i,start_j, end_i,end_j);
+    printf("Disk start = (%d,%d), end = (%d,%d)\n",start_i,start_j, end_i,end_j);
     for (int i = start_i ; i < end_i + 1; i++){
       for (int j = start_j ; j < end_j + 1; j++){
-	// TODO: does not work correctly yet
-	realradius= sqrt(pow(abs(zi-i)*dm->stepy,2) + pow(abs(zj-j)*dm->stepx,2));
-	printf("point (%d,%d) realradius=%f\n",i,j,realradius);
-	if(realradius <= radius) {
-	    printf("point %d(%d,%d) in disk!\n",i*gsize + j, i, j);
+	//	if((i - zi)*(i - zi) + (j - zj)*(j - zj) <= radius*radius){
+	
+	double r = pow(abs(zi-i)*dm->stepy,2) + pow(abs(zj-j)*dm->stepx,2);
+	printf("point (%d,%d) r = %f\n",i,j,r);
+	if(r <= pow(radius,2)) {
+	  //printf("point %d(%d,%d) in disk!\n",i*gsize + j, i, j);
 	    *(activity+( i*gsize + j) ) = 1; // value
 	}
       }
@@ -590,6 +597,32 @@ void initDomain(struct domain *dm, int gsize, double xmin, double xmax, double y
 
 }
 
+void printDomain(struct domain *dm, int gsize) {
+
+  
+  assert(dm);
+  printf( "Printing Domain (%d gridsize)\n",gsize);
+  /* for (int j = 0; j < gsize; j++) { */
+  /*   for (int i = 0; i < gsize; i++) */
+  /* 	printf( " (%6.4f,%6.4fi)", dm->x_min + i*dm->stepx, */
+  /* 				dm->y_min + j*dm->stepy ); */
+  /*     printf( "\n" ); */
+  /* } */
+  for (int iy = 0; iy < gsize*gsize; iy++){
+    if(!(iy % gsize))
+      printf("\n");    
+    printf( " (%6.4f,%6.4fi)", dm->x_min + (iy % gsize *dm->stepx),
+	    dm->y_min + (iy / gsize *dm->stepy) );
+   }
+  printf("\n");    
+  printf("x_min = %f, x_max = %f ------*\n",dm->x_min, dm->x_max);
+  printf("y_min = %f, y_max = %f |\n",dm->y_min, dm->y_max);
+  printf("                                    |\n");
+  printf("                                    |\n");
+  printf("                                    *\n");
+
+  printf( "stepx = %f, stepy = %f \n",dm->stepx, dm->stepy);
+}
 
 
 void printDiagnostics(lapack_int m, lapack_int n,
