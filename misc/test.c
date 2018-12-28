@@ -175,20 +175,16 @@ struct diagnostics * pseudospectra(lapack_int m, lapack_int n, lapack_int gsize,
     create_grcar(acp, m,lda);
     //print_matrix("grcar acp",m,n,acp,lda);
     for (int i = 0; i < lda*m ; i=i+(n+1))
-      acp[i]=acp[i]-(dm->x_min+(iy/gsize * dm->stepx)+(dm->y_min + (iy % gsize * dm->stepy))*I);
+      acp[i]=acp[i]-(dm->x_min+((iy % gsize) * dm->stepx)+(dm->y_min + ((iy / gsize) * dm->stepy))*I);
 
-    /* printf("gridpoint (%f %f) = ",dm->x_min+(iy/gsize * dm->stepx),(dm->y_min + (iy % gsize * dm->stepy))); */
-
-    if(!strcmp(meth,"grid")) {
+    if(!strcmp(meth,"grid"))
       ssv = grid(m,n,acp,gsize,activity,iy);
-    //printf("%f\n",ssv);
-    } else if(!strcmp(meth,"mog")) {
-    mg = mog(m,n,nbepsilon,e,dm,acp,gsize,activity,iy);
+    else if(!strcmp(meth,"mog"))
+      mg = mog(m,n,nbepsilon,e,dm,acp,gsize,activity,iy);
     //printf("%f\n",mg->ssv);
-    } else if(!strcmp(meth,"mmog")) {
-    //mg = mmog(m,n,nbepsilon,e,dm,acp,gsize,activity,iy);
+    else if(!strcmp(meth,"mmog"))
+      //mg = mmog(m,n,nbepsilon,e,dm,acp,gsize,activity,iy);
       printf("Sorry, mmog is not implemented yet!\n");
-    }
     else {
       printf("Wrong method argument! Choose one of grid, mog or mmog.\n");
       exit(1);
@@ -199,6 +195,7 @@ struct diagnostics * pseudospectra(lapack_int m, lapack_int n, lapack_int gsize,
       if(!(mg->skip))
 	svdPoints++;
       //      if (diag->ssv[iy] <= e[0])
+      // TODO: I dont need the diag->pss
 	diag->pss[iy] = diag->ssv[iy];
 	//      else
 	//	diag->pss[iy] = 1;
@@ -269,7 +266,6 @@ double grid(lapack_int m, lapack_int n,
   }
   *(activity+iy) = 1;
 
-  printf("Gridpoint with possible disk (%d,%d) %.4f\n",(iy / gsize) + 1, (iy % gsize) + 1, s[m-1]-0.1);
   free(superb);
   return s[m-1];
 
@@ -322,18 +318,18 @@ struct mog_status * mog(lapack_int m, lapack_int n,
   //printf("Point %d is svded with value %.4f!\n",z, s[m-1]);
   
   if(s[m-1] > e[0]) {// first curve
-    printf("Excluding disk (%d,%d) %.4f %.4f %.4f\n",(z / gsize) + 1, (z % gsize) + 1, dm->x_min + (z / gsize)*dm->stepx,  dm->y_min + (z % gsize) * dm->stepy,s[m-1]-e[0]);
+    //printf("Excluding disk (%d,%d) %.4f %.4f %.4f\n",(z / gsize) + 1, (z % gsize) + 1, dm->x_min + (z / gsize)*dm->stepx,  dm->y_min + (z % gsize) * dm->stepy,s[m-1]-e[0]);
     //locateDisk(s[m-1]-e[0], z, gsize, dm, dk);
     //excludeDisk(gsize, dk, activity,1);
     locateExcludeDisk(s[m-1]-e[0], z, gsize, dm, activity);
     
-    printf("activity (inside):");
-    for (int i = 0; i < gsize * gsize ; i++) {
-      if(!(i % gsize))
-        printf("\n");
-      printf("%d ",*(activity+i));
-    }
-    printf("\n");
+    /* printf("activity (inside):"); */
+    /* for (int i = 0; i < gsize * gsize ; i++) { */
+    /*   if(!(i % gsize)) */
+    /*     printf("\n"); */
+    /*   printf("%d ",*(activity+i)); */
+    /* } */
+    /* printf("\n"); */
 
   }
   
@@ -545,7 +541,7 @@ void locateExcludeDisk(double radius, int center, int gsize, struct domain * dm,
 
   stepx = floor(radius/dm->stepx);
   stepy = floor(radius/dm->stepy);
-  //printf("Disk c:%d radius=%f and dm->stepx=%f ( %f , %f )\n", center,radius, dm->stepx, stepx, stepy);
+
   int zi = center / gsize;
   int zj = center % gsize;
   double r = 0.0;
@@ -564,20 +560,16 @@ void locateExcludeDisk(double radius, int center, int gsize, struct domain * dm,
 
 
    
-    
-    printf("Disk start = (%d,%d), end = (%d,%d)\n",start_i,start_j, end_i,end_j);
+    //printf("Disk start = (%d,%d), end = (%d,%d)\n",start_i,start_j, end_i,end_j);
     for (int i = start_i ; i < end_i + 1; i++){
       for (int j = start_j ; j < end_j + 1; j++){
-	//	if((i - zi)*(i - zi) + (j - zj)*(j - zj) <= radius*radius){
-	
-	double r = pow(abs(zi-i)*dm->stepy,2) + pow(abs(zj-j)*dm->stepx,2);
-	printf("point (%d,%d) r = %f\n",i,j,r);
-	if(r <= pow(radius,2)) {
-	  //printf("point %d(%d,%d) in disk!\n",i*gsize + j, i, j);
+	//double r = pow(abs(zi-i)*dm->stepy,2) + pow(abs(zj-j)*dm->stepx,2);
+	r = (i - zi)*dm->stepy* (i - zi)*dm->stepy + (j - zj)*dm->stepx * (j - zj)*dm->stepx;
+	if(r <= (radius*radius))
 	    *(activity+( i*gsize + j) ) = 1; // value
-	}
       }
     }
+
 }
 
 
@@ -611,8 +603,8 @@ void printDomain(struct domain *dm, int gsize) {
   for (int iy = 0; iy < gsize*gsize; iy++){
     if(!(iy % gsize))
       printf("\n");    
-    printf( " (%6.4f,%6.4fi)", dm->x_min + (iy % gsize *dm->stepx),
-	    dm->y_min + (iy / gsize *dm->stepy) );
+    printf( " (%6.4f,%6.4fi)", dm->x_min + ((iy % gsize) * dm->stepx),
+	    dm->y_min + ((iy / gsize) * dm->stepy) );
    }
   printf("\n");    
   printf("x_min = %f, x_max = %f ------*\n",dm->x_min, dm->x_max);
@@ -645,9 +637,6 @@ void printDiagnostics(lapack_int m, lapack_int n,
 	 dm->stepx, dm->stepy);
 
   printf("Diagnostics:\n");
-  timeval_diff(&interval,&diag->later,&diag->earlier);
-  printf("- Time: (%ld seconds, %ld microseconds)\n",
-	 interval.tv_sec,(long) interval.tv_usec);
   assert(diag->ssv);
   printf("- Ssv table: ");
   for (int i = 0; i < gsize * gsize ; i++) {
@@ -662,15 +651,18 @@ void printDiagnostics(lapack_int m, lapack_int n,
 
   assert(diag->pss);
   printf("- Pss table:\n");
-  for (int i = 0; i < gsize ; i++) {
-    for (int j = 0; j <= gsize*(gsize-1) ; j=j+gsize) {
-      printf("%.4f ",diag->pss[j+i]);
-      if (diag->pss[j+i] <= 0.1)
-	pps_count++;
+    for (int i = 0; i < gsize * gsize ; i++) {
+    if(!(i % gsize))
+      printf("\n");
+    if (diag->ssv[i] <= 0.1) {
+	    pps_count++;
+	    printf("%.3f ",diag->ssv[i]);
     }
-    printf("\n");
-  }
-  
+     else
+     printf("-1.00 ");
+  }  
+  printf("\n");  
+
   printf("- Activity table: ");
   for (int i = 0; i < gsize * gsize ; i++) {
     if(!(i % gsize))
@@ -682,4 +674,8 @@ void printDiagnostics(lapack_int m, lapack_int n,
   printf(" - Number of visited gridPoints: %d\n",diag->svdPoints);
   printf(" - Number of points in the pseudospectra: %d\n",pps_count);
   printf(" - Gain percentage: %.2f\n", (double)( (gsize*gsize) - diag->svdPoints )/ (gsize*gsize) );
+  timeval_diff(&interval,&diag->later,&diag->earlier);
+  printf("- Time: (%ld seconds, %ld microseconds)\n",
+	 interval.tv_sec,(long) interval.tv_usec);
+
 }
